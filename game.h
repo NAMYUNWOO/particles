@@ -10,6 +10,16 @@
 #define DEFAULT_ATTRACTION_FORCE 1.0f  // Default force for particle attraction
 #define BOOSTED_ATTRACTION_FORCE 5.0f  // Boosted force when space key is pressed
 
+typedef struct {
+    Vector2 position;
+    Vector2 velocity;
+    Color color;
+    float radius;
+    float timeToLive;
+} ExplosionParticle;
+
+#define MAX_EXPLOSION_PARTICLES 200
+
 // Game state structure
 typedef struct {
     // Window properties
@@ -26,6 +36,8 @@ typedef struct {
     Player player;
     Particle* particles;  // Dynamic array of particles
     Enemy* enemies;  // Dynamic array of enemies
+    ExplosionParticle explosionParticles[MAX_EXPLOSION_PARTICLES];
+    int explosionParticleCount;
 } Game;
 
 // Game initialization and cleanup

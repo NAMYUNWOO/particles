@@ -4,7 +4,7 @@
 #include "raylib.h"
 
 // Constants
-#define PLAYER_BASE_SIZE 3.0f  // Base player size in pixels
+#define PLAYER_BASE_SIZE 10.0f  // Base player size in pixels
 
 // Player structure
 typedef struct {
