@@ -116,10 +116,19 @@ void UpdateGame(Game* game) {
         // 마우스 위치로 끌어당김
         AttractParticle(&game->particles[i], game->player.position, 1.0f);
         
-        // 스페이스바가 눌려있고 거리가 30 이내인 경우 속도 5배 증가
+        // 스페이스바가 눌려있고 거리가 30 이내인 경우, 플레이어 방향으로 움직이는 파티클만 속도 증가
         if (isSpacePressed && distance <= 30.0f) {
-            game->particles[i].velocity.x *= 5.0f;
-            game->particles[i].velocity.y *= 5.0f;
+            // 파티클의 현재 속도와 플레이어 방향의 내적 계산
+            float toPlayerX = -dx / distance;  // 플레이어 방향 정규화
+            float toPlayerY = -dy / distance;
+            float dotProduct = game->particles[i].velocity.x * toPlayerX + 
+                             game->particles[i].velocity.y * toPlayerY;
+            
+            // 내적이 양수일 때만 (플레이어 방향으로 움직일 때) 속도 증가
+            if (dotProduct > 0) {
+                game->particles[i].velocity.x *= 5.0f;
+                game->particles[i].velocity.y *= 5.0f;
+            }
         }
         
         // 마찰 적용 (0.99 = 약간의 감속)
