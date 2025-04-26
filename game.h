@@ -28,4 +28,10 @@ void DrawGame(Game game);
 // 게임 종료 시 메모리 해제
 void CleanupGame(Game* game);
 
+// 특정 방향에서 가장 가까운 파티클 찾기
+int FindNearestParticleInDirection(Game* game, Vector2 direction);
+
+// 플레이어와 파티클 교체
+void SwapPlayerWithParticle(Game* game, int particleIndex);
+
 #endif // GAME_H 
