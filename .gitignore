@@ -1,0 +1,24 @@
+# IDE specific files
+.vscode/
+.vs/
+
+# Prerequisites
+*.d
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Executables
+*.exe
+*.out
+*.app
+game
+
+# Debug files
+*.dSYM/
+
+# macOS specific
+.DS_Store 
