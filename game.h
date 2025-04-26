@@ -25,7 +25,7 @@ typedef struct {
     // Game entities
     Player player;
     Particle* particles;  // Dynamic array of particles
-    Enemy enemies[MAX_ENEMIES];  // Fixed array of enemies
+    Enemy* enemies;  // Dynamic array of enemies
 } Game;
 
 // Game initialization and cleanup

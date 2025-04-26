@@ -28,6 +28,9 @@ Game InitGame(int screenWidth, int screenHeight) {
         game.particles[i] = InitParticle(screenWidth, screenHeight);
     }
 
+    // 적(enemy) 배열 동적 할당
+    game.enemies = (Enemy*)malloc(MAX_ENEMIES * sizeof(Enemy));
+
     return game;
 }
 
@@ -109,6 +112,7 @@ void UpdateGame(Game* game) {
     // Enemy spawn and update logic
     float currentTime = GetTime();
     if (currentTime - game->lastEnemySpawnTime >= ENEMY_SPAWN_TIME && game->enemyCount < MAX_ENEMIES) {
+        // 동적 배열에 적 추가
         game->enemies[game->enemyCount] = InitEnemy(game->screenWidth, game->screenHeight);
         game->enemyCount++;
         game->lastEnemySpawnTime = currentTime;
@@ -135,6 +139,28 @@ void UpdateGame(Game* game) {
         
         // 파티클 이동 및 화면 경계 처리
         MoveParticle(&game->particles[i], game->screenWidth, game->screenHeight);
+    }
+
+    // Enemy-Particle 충돌 체크 및 health 감소/삭제
+    int e = 0;
+    while (e < game->enemyCount) {
+        for (int p = 0; p < PARTICLE_COUNT; p++) {
+            if (CheckCollisionCircles(game->enemies[e].position, game->enemies[e].radius,
+                                      game->particles[p].position, 1.0f)) {
+                // printf("Enemy %d collided with Particle %d\n", e, p);
+                game->enemies[e].health -= 0.001f;
+            }
+        }
+        if (game->enemies[e].health <= 0.0f) {
+            // Remove enemy by shifting
+            for (int j = e; j < game->enemyCount - 1; j++) {
+                game->enemies[j] = game->enemies[j+1];
+            }
+            game->enemyCount--;
+            // 메모리 해제는 필요 없음(동적 배열 전체는 CleanupGame에서 해제)
+            continue; // 같은 인덱스에서 다시 검사
+        }
+        e++;
     }
 }
 
@@ -166,5 +192,9 @@ void CleanupGame(Game* game) {
     if (game->particles != NULL) {
         free(game->particles);
         game->particles = NULL;
+    }
+    if (game->enemies != NULL) {
+        free(game->enemies);
+        game->enemies = NULL;
     }
 } 

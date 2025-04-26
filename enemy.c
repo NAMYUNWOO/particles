@@ -15,7 +15,9 @@ Enemy InitEnemy(int screenWidth, int screenHeight) {
         },
         .color = PURPLE,
         .spawnTime = GetTime(),
-        .radius = PLAYER_BASE_SIZE * sizeMultiplier  // Use PLAYER_BASE_SIZE instead
+        .radius = PLAYER_BASE_SIZE * sizeMultiplier,  // Use PLAYER_BASE_SIZE instead
+        .health = PLAYER_BASE_SIZE * sizeMultiplier*10.0f, 
+        .maxHealth = PLAYER_BASE_SIZE * sizeMultiplier*10.0f, 
     };
     
     return enemy;
@@ -46,5 +48,10 @@ void UpdateEnemy(Enemy* enemy, int screenWidth, int screenHeight) {
 }
 
 void DrawEnemy(Enemy enemy) {
-    DrawCircle(enemy.position.x, enemy.position.y, enemy.radius, enemy.color);
+    Color c = enemy.color;
+    float ratio = (enemy.maxHealth > 0) ? (enemy.health / enemy.maxHealth) : 0.0f;
+    if (ratio < 0.0f) ratio = 0.0f;
+    if (ratio > 1.0f) ratio = 1.0f;
+    c.a = (unsigned char)(255 * ratio);
+    DrawCircle(enemy.position.x, enemy.position.y, enemy.radius, c);
 } 

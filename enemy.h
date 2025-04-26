@@ -11,6 +11,8 @@ typedef struct {
     Color color;        // Enemy color
     float spawnTime;    // Time when enemy was spawned
     float radius;       // Enemy radius (3-10x player size)
+    float health;
+    float maxHealth;
 } Enemy;
 
 // Constants
