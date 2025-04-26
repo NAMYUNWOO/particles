@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+// Initialize game state and resources
 Game InitGame(int screenWidth, int screenHeight) {
     // 랜덤 시드 초기화
     SetRandomSeed(time(NULL));
@@ -118,9 +119,9 @@ void UpdateGame(Game* game) {
         
         // 스페이스바가 눌려있고 거리가 30 이내인 경우, 플레이어 방향으로 움직이는 파티클만 속도 증가
         if (isSpacePressed) {
-            AttractParticle(&game->particles[i], game->player.position, 5.0f);
-        }else{
-            AttractParticle(&game->particles[i], game->player.position, 1.0f);
+            AttractParticle(&game->particles[i], game->player.position, BOOSTED_ATTRACTION_FORCE);
+        } else {
+            AttractParticle(&game->particles[i], game->player.position, DEFAULT_ATTRACTION_FORCE);
         }
         
         // 마찰 적용 (0.99 = 약간의 감속)

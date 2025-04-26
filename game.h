@@ -4,34 +4,36 @@
 #include "player.h"
 #include "particle.h"
 
-// 파티클 수 (많이 생성하므로 10만개로 설정)
-#define PARTICLE_COUNT 100000
+// Constants
+#define PARTICLE_COUNT 100000  // Maximum number of particles
+#define DEFAULT_ATTRACTION_FORCE 1.0f  // Default force for particle attraction
+#define BOOSTED_ATTRACTION_FORCE 5.0f  // Boosted force when space key is pressed
 
+// Game state structure
 typedef struct {
+    // Window properties
     int screenWidth;
     int screenHeight;
+    
+    // Game properties
     int moveSpeed;
-    Player player;
-    Particle* particles;  // 파티클 배열 포인터 (동적 할당)
     float deltaTime;
+    
+    // Game entities
+    Player player;
+    Particle* particles;  // Dynamic array of particles
 } Game;
 
-// 게임 초기화
+// Game initialization and cleanup
 Game InitGame(int screenWidth, int screenHeight);
-
-// 게임 상태 업데이트
-void UpdateGame(Game* game);
-
-// 게임 그리기
-void DrawGame(Game game);
-
-// 게임 종료 시 메모리 해제
 void CleanupGame(Game* game);
 
-// 특정 방향에서 가장 가까운 파티클 찾기
-int FindNearestParticleInDirection(Game* game, Vector2 direction);
+// Game loop functions
+void UpdateGame(Game* game);
+void DrawGame(Game game);
 
-// 플레이어와 파티클 교체
+// Particle management functions
+int FindNearestParticleInDirection(Game* game, Vector2 direction);
 void SwapPlayerWithParticle(Game* game, int particleIndex);
 
 #endif // GAME_H 
