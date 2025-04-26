@@ -10,7 +10,7 @@ LDFLAGS = -L/opt/homebrew/Cellar/raylib/5.5/lib
 LDLIBS = -lraylib -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo
 
 # Source files and output
-SRC = main.c game.c player.c particle.c
+SRC = main.c game.c player.c particle.c enemy.c
 OUTPUT = game
 
 # Object files

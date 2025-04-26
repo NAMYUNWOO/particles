@@ -15,7 +15,9 @@ Game InitGame(int screenWidth, int screenHeight) {
         .moveSpeed = 2,
         .player = InitPlayer(screenWidth, screenHeight),
         .particles = NULL,  // 초기화는 아래에서
-        .deltaTime = 0
+        .deltaTime = 0,
+        .lastEnemySpawnTime = GetTime(),
+        .enemyCount = 0
     };
 
     // 파티클 배열 동적 할당
@@ -104,13 +106,24 @@ void UpdateGame(Game* game) {
     // 플레이어 업데이트 (방향키로 이동)
     UpdatePlayer(&game->player, game->screenWidth, game->screenHeight, game->moveSpeed);
     
+    // Enemy spawn and update logic
+    float currentTime = GetTime();
+    if (currentTime - game->lastEnemySpawnTime >= ENEMY_SPAWN_TIME && game->enemyCount < MAX_ENEMIES) {
+        game->enemies[game->enemyCount] = InitEnemy(game->screenWidth, game->screenHeight);
+        game->enemyCount++;
+        game->lastEnemySpawnTime = currentTime;
+    }
+    
+    // Update all enemies
+    for (int i = 0; i < game->enemyCount; i++) {
+        UpdateEnemy(&game->enemies[i], game->screenWidth, game->screenHeight);
+    }
+    
     // 스페이스바를 누르고 있는지 확인
     bool isSpacePressed = IsKeyDown(KEY_SPACE);
     
     // 모든 파티클 업데이트
     for (int i = 0; i < PARTICLE_COUNT; i++) {
-        
-        // 스페이스바가 눌려있고 거리가 30 이내인 경우, 플레이어 방향으로 움직이는 파티클만 속도 증가
         if (isSpacePressed) {
             AttractParticle(&game->particles[i], game->player.position, BOOSTED_ATTRACTION_FORCE);
         } else {
@@ -132,6 +145,11 @@ void DrawGame(Game game) {
         // 모든 파티클 그리기
         for (int i = 0; i < PARTICLE_COUNT; i++) {
             DrawParticlePixel(game.particles[i]);
+        }
+        
+        // Draw all enemies
+        for (int i = 0; i < game.enemyCount; i++) {
+            DrawEnemy(game.enemies[i]);
         }
         
         // 플레이어 그리기

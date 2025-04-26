@@ -3,6 +3,7 @@
 
 #include "player.h"
 #include "particle.h"
+#include "enemy.h"
 
 // Constants
 #define PARTICLE_COUNT 100000  // Maximum number of particles
@@ -18,10 +19,13 @@ typedef struct {
     // Game properties
     int moveSpeed;
     float deltaTime;
+    float lastEnemySpawnTime;  // Time when last enemy was spawned
+    int enemyCount;           // Current number of enemies
     
     // Game entities
     Player player;
     Particle* particles;  // Dynamic array of particles
+    Enemy enemies[MAX_ENEMIES];  // Fixed array of enemies
 } Game;
 
 // Game initialization and cleanup

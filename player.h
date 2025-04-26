@@ -3,18 +3,22 @@
 
 #include "raylib.h"
 
+// Constants
+#define PLAYER_BASE_SIZE 3.0f  // Base player size in pixels
+
+// Player structure
 typedef struct {
     Vector2 position;
-    int size;
+    float size;        // Current player size
 } Player;
 
-// Initialize a new player
+// Initialize player
 Player InitPlayer(int screenWidth, int screenHeight);
 
-// Update player position based on input
+// Update player position
 void UpdatePlayer(Player* player, int screenWidth, int screenHeight, int moveSpeed);
 
-// Draw the player
+// Draw player
 void DrawPlayer(Player player);
 
-#endif // PLAYER_H 
+#endif // PLAYER_H
