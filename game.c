@@ -109,13 +109,6 @@ void UpdateGame(Game* game) {
     
     // 모든 파티클 업데이트
     for (int i = 0; i < PARTICLE_COUNT; i++) {
-        // 플레이어와 파티클 사이의 거리 계산
-        float dx = game->particles[i].position.x - game->player.position.x;
-        float dy = game->particles[i].position.y - game->player.position.y;
-        float distance = sqrtf(dx * dx + dy * dy);
-        
-        // 마우스 위치로 끌어당김
-        
         
         // 스페이스바가 눌려있고 거리가 30 이내인 경우, 플레이어 방향으로 움직이는 파티클만 속도 증가
         if (isSpacePressed) {
