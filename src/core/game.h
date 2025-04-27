@@ -1,13 +1,24 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include "player.h"
-#include "particle.h"
+#include "../entities/player.h"
+#include "../entities/particle.h"
+#include "../entities/enemy.h"
 
 // Constants
 #define PARTICLE_COUNT 100000  // Maximum number of particles
 #define DEFAULT_ATTRACTION_FORCE 1.0f  // Default force for particle attraction
 #define BOOSTED_ATTRACTION_FORCE 5.0f  // Boosted force when space key is pressed
+
+typedef struct {
+    Vector2 position;
+    Vector2 velocity;
+    Color color;
+    float radius;
+    float timeToLive;
+} ExplosionParticle;
+
+#define MAX_EXPLOSION_PARTICLES 200
 
 // Game state structure
 typedef struct {
@@ -18,10 +29,15 @@ typedef struct {
     // Game properties
     int moveSpeed;
     float deltaTime;
+    float lastEnemySpawnTime;  // Time when last enemy was spawned
+    int enemyCount;           // Current number of enemies
     
     // Game entities
     Player player;
     Particle* particles;  // Dynamic array of particles
+    Enemy* enemies;  // Dynamic array of enemies
+    ExplosionParticle explosionParticles[MAX_EXPLOSION_PARTICLES];
+    int explosionParticleCount;
 } Game;
 
 // Game initialization and cleanup
