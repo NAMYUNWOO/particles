@@ -3,7 +3,7 @@
 Player InitPlayer(int screenWidth, int screenHeight) {
     Player player = {
         .position = (Vector2){ screenWidth/2, screenHeight/2 },
-        .size = 3
+        .size = PLAYER_BASE_SIZE
     };
     return player;
 }

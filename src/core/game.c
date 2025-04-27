@@ -4,6 +4,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+// Helper function for linear interpolation
+static float Lerp(float a, float b, float t) {
+    return a + (b - a) * t;
+}
+
 // Initialize game state and resources
 Game InitGame(int screenWidth, int screenHeight) {
     // 랜덤 시드 초기화
@@ -15,7 +20,10 @@ Game InitGame(int screenWidth, int screenHeight) {
         .moveSpeed = 2,
         .player = InitPlayer(screenWidth, screenHeight),
         .particles = NULL,  // 초기화는 아래에서
-        .deltaTime = 0
+        .deltaTime = 0,
+        .lastEnemySpawnTime = GetTime(),
+        .enemyCount = 0,
+        .explosionParticleCount = 0
     };
 
     // 파티클 배열 동적 할당
@@ -25,6 +33,9 @@ Game InitGame(int screenWidth, int screenHeight) {
     for (int i = 0; i < PARTICLE_COUNT; i++) {
         game.particles[i] = InitParticle(screenWidth, screenHeight);
     }
+
+    // 적(enemy) 배열 동적 할당
+    game.enemies = (Enemy*)malloc(MAX_ENEMIES * sizeof(Enemy));
 
     return game;
 }
@@ -83,6 +94,28 @@ void SwapPlayerWithParticle(Game* game, int particleIndex) {
     game->particles[particleIndex].velocity = (Vector2){0, 0};
 }
 
+// Helper function to spawn explosion particles
+void SpawnExplosion(Game* game, Vector2 position, Color color, float baseRadius) {
+    int numParticles = 20 + GetRandomValue(0, 10); // 20~30개
+    for (int i = 0; i < numParticles && game->explosionParticleCount < MAX_EXPLOSION_PARTICLES; i++) {
+        float angle = ((float)i / numParticles) * 2 * PI + ((float)GetRandomValue(-100, 100) / 100.0f) * 0.2f;
+        float speed = 2.0f + (float)GetRandomValue(0, 100) / 100.0f * 2.0f;
+        ExplosionParticle ep = {
+            .position = position,
+            .velocity = { cosf(angle) * speed, sinf(angle) * speed },
+            .color = (Color){
+                (unsigned char)Lerp(color.r, YELLOW.r, GetRandomValue(0,100)/100.0f),
+                (unsigned char)Lerp(color.g, YELLOW.g, GetRandomValue(0,100)/100.0f),
+                (unsigned char)Lerp(color.b, YELLOW.b, GetRandomValue(0,100)/100.0f),
+                255
+            },
+            .radius = baseRadius * (0.2f + (float)GetRandomValue(0,100)/500.0f),
+            .timeToLive = 0.5f + (float)GetRandomValue(0,100)/200.0f // 0.5~1.0초
+        };
+        game->explosionParticles[game->explosionParticleCount++] = ep;
+    }
+}
+
 void UpdateGame(Game* game) {
     game->deltaTime = GetFrameTime();
     
@@ -104,13 +137,25 @@ void UpdateGame(Game* game) {
     // 플레이어 업데이트 (방향키로 이동)
     UpdatePlayer(&game->player, game->screenWidth, game->screenHeight, game->moveSpeed);
     
+    // Enemy spawn and update logic
+    float currentTime = GetTime();
+    if (currentTime - game->lastEnemySpawnTime >= ENEMY_SPAWN_TIME && game->enemyCount < MAX_ENEMIES) {
+        // 동적 배열에 적 추가
+        game->enemies[game->enemyCount] = InitEnemy(game->screenWidth, game->screenHeight);
+        game->enemyCount++;
+        game->lastEnemySpawnTime = currentTime;
+    }
+    
+    // Update all enemies
+    for (int i = 0; i < game->enemyCount; i++) {
+        UpdateEnemy(&game->enemies[i], game->screenWidth, game->screenHeight);
+    }
+    
     // 스페이스바를 누르고 있는지 확인
     bool isSpacePressed = IsKeyDown(KEY_SPACE);
     
     // 모든 파티클 업데이트
     for (int i = 0; i < PARTICLE_COUNT; i++) {
-        
-        // 스페이스바가 눌려있고 거리가 30 이내인 경우, 플레이어 방향으로 움직이는 파티클만 속도 증가
         if (isSpacePressed) {
             AttractParticle(&game->particles[i], game->player.position, BOOSTED_ATTRACTION_FORCE);
         } else {
@@ -123,6 +168,48 @@ void UpdateGame(Game* game) {
         // 파티클 이동 및 화면 경계 처리
         MoveParticle(&game->particles[i], game->screenWidth, game->screenHeight);
     }
+
+    // Enemy-Particle 충돌 체크 및 health 감소/삭제
+    int e = 0;
+    while (e < game->enemyCount) {
+        for (int p = 0; p < PARTICLE_COUNT; p++) {
+            if (CheckCollisionCircles(game->enemies[e].position, game->enemies[e].radius,
+                                      game->particles[p].position, 1.0f)) {
+                // game->enemies[e].damage += 0.001f; // 필요시 누적
+                game->enemies[e].health -= 0.001f;
+            }
+        }
+        if (game->enemies[e].health <= 0.0f) {
+            // 폭발 파티클 생성
+            SpawnExplosion(game, game->enemies[e].position, game->enemies[e].color, game->enemies[e].radius);
+            // Remove enemy by shifting
+            for (int j = e; j < game->enemyCount - 1; j++) {
+                game->enemies[j] = game->enemies[j+1];
+            }
+            game->enemyCount--;
+            continue;
+        }
+        e++;
+    }
+
+    // 폭발 파티클 업데이트
+    int i = 0;
+    while (i < game->explosionParticleCount) {
+        game->explosionParticles[i].position.x += game->explosionParticles[i].velocity.x;
+        game->explosionParticles[i].position.y += game->explosionParticles[i].velocity.y;
+        game->explosionParticles[i].velocity.x *= 0.95f;
+        game->explosionParticles[i].velocity.y *= 0.95f;
+        game->explosionParticles[i].timeToLive -= game->deltaTime;
+        if (game->explosionParticles[i].timeToLive <= 0.0f) {
+            // Remove particle by shifting
+            for (int j = i; j < game->explosionParticleCount - 1; j++) {
+                game->explosionParticles[j] = game->explosionParticles[j+1];
+            }
+            game->explosionParticleCount--;
+            continue;
+        }
+        i++;
+    }
 }
 
 void DrawGame(Game game) {
@@ -132,6 +219,19 @@ void DrawGame(Game game) {
         // 모든 파티클 그리기
         for (int i = 0; i < PARTICLE_COUNT; i++) {
             DrawParticlePixel(game.particles[i]);
+        }
+        
+        // 폭발 파티클 그리기
+        for (int i = 0; i < game.explosionParticleCount; i++) {
+            Color c = game.explosionParticles[i].color;
+            float t = game.explosionParticles[i].timeToLive;
+            if (t < 0.2f) c.a = (unsigned char)(255 * (t/0.2f));
+            DrawCircleV(game.explosionParticles[i].position, game.explosionParticles[i].radius, c);
+        }
+        
+        // Draw all enemies
+        for (int i = 0; i < game.enemyCount; i++) {
+            DrawEnemy(game.enemies[i]);
         }
         
         // 플레이어 그리기
@@ -148,5 +248,9 @@ void CleanupGame(Game* game) {
     if (game->particles != NULL) {
         free(game->particles);
         game->particles = NULL;
+    }
+    if (game->enemies != NULL) {
+        free(game->enemies);
+        game->enemies = NULL;
     }
 } 
