@@ -1,9 +1,9 @@
 #ifndef GAME_H
 #define GAME_H
 
-#include "player.h"
-#include "particle.h"
-#include "enemy.h"
+#include "../entities/player.h"
+#include "../entities/particle.h"
+#include "../entities/enemy.h"
 
 // Constants
 #define PARTICLE_COUNT 100000  // Maximum number of particles
