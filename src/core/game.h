@@ -4,24 +4,17 @@
 #include "../entities/player.h"
 #include "../entities/particle.h"
 #include "../entities/enemy.h"
+#include "../entities/explosion.h"
+#include "../entities/managers/enemy_manager.h"
+#include "../entities/managers/particle_manager.h"
 
 // Constants
 #define PARTICLE_COUNT 100000  // Maximum number of particles
 #define DEFAULT_ATTRACTION_FORCE 1.0f  // Default force for particle attraction
 #define BOOSTED_ATTRACTION_FORCE 5.0f  // Boosted force when space key is pressed
 
-typedef struct {
-    Vector2 position;
-    Vector2 velocity;
-    Color color;
-    float radius;
-    float timeToLive;
-} ExplosionParticle;
-
-#define MAX_EXPLOSION_PARTICLES 200
-
 // Game state structure
-typedef struct {
+typedef struct Game {
     // Window properties
     int screenWidth;
     int screenHeight;
@@ -51,5 +44,13 @@ void DrawGame(Game game);
 // Particle management functions
 int FindNearestParticleInDirection(Game* game, Vector2 direction);
 void SwapPlayerWithParticle(Game* game, int particleIndex);
+
+// Managers and physics functions
+void SpawnEnemyIfNeeded(Game* game);
+void UpdateAllEnemies(Game* game);
+void UpdateAllParticles(Game* game, bool isSpacePressed);
+void UpdateAllExplosionParticles(Game* game);
+bool CheckCollisionEnemyParticle(Enemy enemy, Particle particle);
+void ProcessEnemyCollisions(Game* game);
 
 #endif // GAME_H 
