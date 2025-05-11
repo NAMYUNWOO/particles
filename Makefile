@@ -13,14 +13,19 @@ LDLIBS = -lraylib -framework OpenGL -framework Cocoa -framework IOKit -framework
 SRC_DIR = src
 CORE_DIR = $(SRC_DIR)/core
 ENTITIES_DIR = $(SRC_DIR)/entities
+MANAGERS_DIR = $(ENTITIES_DIR)/managers
 BIN_DIR = bin
 
 # Source files
 SRC_FILES = $(SRC_DIR)/main.c \
             $(CORE_DIR)/game.c \
+            $(CORE_DIR)/physics.c \
             $(ENTITIES_DIR)/player.c \
             $(ENTITIES_DIR)/particle.c \
-            $(ENTITIES_DIR)/enemy.c
+            $(ENTITIES_DIR)/enemy.c \
+            $(ENTITIES_DIR)/explosion.c \
+            $(MANAGERS_DIR)/enemy_manager.c \
+            $(MANAGERS_DIR)/particle_manager.c
 
 # Output
 OUTPUT = $(BIN_DIR)/game
