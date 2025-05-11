@@ -1,7 +1,3 @@
-# IDE specific files
-.vscode/
-.vs/
-
 # Prerequisites
 *.d
 
