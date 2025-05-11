@@ -20,6 +20,8 @@ BIN_DIR = bin
 SRC_FILES = $(SRC_DIR)/main.c \
             $(CORE_DIR)/game.c \
             $(CORE_DIR)/physics.c \
+            $(CORE_DIR)/input_handler.c \
+            $(EVENT_DIR)/event_system.c \
             $(ENTITIES_DIR)/player.c \
             $(ENTITIES_DIR)/particle.c \
             $(ENTITIES_DIR)/enemy.c \

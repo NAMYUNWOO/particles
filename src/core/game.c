@@ -1,4 +1,5 @@
 #include "game.h"
+#include "input_handler.h"
 #include <math.h>
 #include <time.h>
 #include <stdlib.h>
@@ -26,7 +27,8 @@ Game InitGame(int screenWidth, int screenHeight) {
         .gameState = GAME_STATE_PLAYING,
         .playerName[0] = '\0',
         .nameLength = 0,
-        .scoreboardCount = 0
+        .scoreboardCount = 0,
+        .useEventSystem = true  // 이벤트 시스템 사용 설정
     };
 
     // 파티클 배열 동적 할당
@@ -101,6 +103,12 @@ void SwapPlayerWithParticle(Game* game, int particleIndex) {
 
 void UpdateGame(Game* game) {
     game->deltaTime = GetFrameTime();
+    
+    // 이벤트 시스템 사용 시 입력 이벤트 처리
+    if (game->useEventSystem) {
+        ProcessInputEvents();
+    }
+    
     if (game->gameState == GAME_STATE_OVER) {
         // Enter name state on any key
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
@@ -131,28 +139,35 @@ void UpdateGame(Game* game) {
         return;
     }
     if (game->gameState == GAME_STATE_PLAYING) {
-    // WASD 키 입력 처리 - 키를 누르고 있는 동안 계속 작동
-    Vector2 direction = {0, 0};
-    if (IsKeyDown(KEY_W)) direction = (Vector2){0, -1};
-    if (IsKeyDown(KEY_S)) direction = (Vector2){0, 1};
-    if (IsKeyDown(KEY_A)) direction = (Vector2){-1, 0};
-    if (IsKeyDown(KEY_D)) direction = (Vector2){1, 0};
-    // 방향키가 눌려있다면 해당 방향의 가장 가까운 파티클과 교체
-    if (direction.x != 0 || direction.y != 0) {
-        int nearestIndex = FindNearestParticleInDirection(game, direction);
-        if (nearestIndex != -1) {
-            SwapPlayerWithParticle(game, nearestIndex);
+    // 이벤트 시스템을 사용하지 않을 경우에만 직접 입력 처리
+    if (!game->useEventSystem) {
+        // WASD 키 입력 처리 - 키를 누르고 있는 동안 계속 작동
+        Vector2 direction = {0, 0};
+        if (IsKeyDown(KEY_W)) direction = (Vector2){0, -1};
+        if (IsKeyDown(KEY_S)) direction = (Vector2){0, 1};
+        if (IsKeyDown(KEY_A)) direction = (Vector2){-1, 0};
+        if (IsKeyDown(KEY_D)) direction = (Vector2){1, 0};
+        // 방향키가 눌려있다면 해당 방향의 가장 가까운 파티클과 교체
+        if (direction.x != 0 || direction.y != 0) {
+            int nearestIndex = FindNearestParticleInDirection(game, direction);
+            if (nearestIndex != -1) {
+                SwapPlayerWithParticle(game, nearestIndex);
+            }
         }
     }
-    // 플레이어 업데이트 (방향키로 이동)
+        // 플레이어 업데이트 (방향키로 이동)
         UpdatePlayer(&game->player, game->screenWidth, game->screenHeight, game->moveSpeed, game->deltaTime);
         // Enemy spawn and update
         SpawnEnemyIfNeeded(game);
         UpdateAllEnemies(game);
-    // 스페이스바를 누르고 있는지 확인
-    bool isSpacePressed = IsKeyDown(KEY_SPACE);
-    // 모든 파티클 업데이트
-        UpdateAllParticles(game, isSpacePressed);
+    // 스페이스바를 누르고 있는지 확인 (이벤트 시스템 미사용 시)
+    bool isSpacePressed = false;
+    if (!game->useEventSystem) {
+        isSpacePressed = IsKeyDown(KEY_SPACE);
+        game->player.isBoosting = isSpacePressed;
+    }
+        // 모든 파티클 업데이트
+        UpdateAllParticles(game, game->player.isBoosting);
         // Enemy-Particle 충돌 체크 및 health 감소/삭제
         ProcessEnemyCollisions(game);
         // 플레이어-적 충돌 체크
@@ -169,7 +184,7 @@ void UpdateGame(Game* game) {
     }
             }
         }
-    // 폭발 파티클 업데이트
+        // 폭발 파티클 업데이트
         UpdateAllExplosionParticles(game);
     }
 }

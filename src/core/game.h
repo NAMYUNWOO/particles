@@ -52,6 +52,9 @@ typedef struct Game {
     int nameLength;
     ScoreEntry scoreboard[MAX_SCOREBOARD_ENTRIES];
     int scoreboardCount;
+    
+    // 이벤트 시스템 관련 플래그
+    bool useEventSystem;  // 이벤트 시스템 사용 여부
 } Game;
 
 // Game initialization and cleanup
