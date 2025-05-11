@@ -13,6 +13,6 @@ void SpawnEnemyIfNeeded(Game* game) {
 
 void UpdateAllEnemies(Game* game) {
     for (int i = 0; i < game->enemyCount; i++) {
-        UpdateEnemy(&game->enemies[i], game->screenWidth, game->screenHeight);
+        UpdateEnemy(&game->enemies[i], game->screenWidth, game->screenHeight, game->deltaTime);
     }
 }

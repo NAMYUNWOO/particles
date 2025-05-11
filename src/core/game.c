@@ -3,6 +3,9 @@
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+
+#define SCOREBOARD_FILENAME "scoreboard.txt"
 
 // Initialize game state and resources
 Game InitGame(int screenWidth, int screenHeight) {
@@ -18,7 +21,12 @@ Game InitGame(int screenWidth, int screenHeight) {
         .deltaTime = 0,
         .lastEnemySpawnTime = GetTime(),
         .enemyCount = 0,
-        .explosionParticleCount = 0
+        .explosionParticleCount = 0,
+        .score = 0,
+        .gameState = GAME_STATE_PLAYING,
+        .playerName[0] = '\0',
+        .nameLength = 0,
+        .scoreboardCount = 0
     };
 
     // 파티클 배열 동적 할당
@@ -31,6 +39,8 @@ Game InitGame(int screenWidth, int screenHeight) {
 
     // 적(enemy) 배열 동적 할당
     game.enemies = (Enemy*)malloc(MAX_ENEMIES * sizeof(Enemy));
+
+    LoadScoreboard(&game, SCOREBOARD_FILENAME);
 
     return game;
 }
@@ -91,14 +101,42 @@ void SwapPlayerWithParticle(Game* game, int particleIndex) {
 
 void UpdateGame(Game* game) {
     game->deltaTime = GetFrameTime();
-    
+    if (game->gameState == GAME_STATE_OVER) {
+        // Enter name state on any key
+        if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
+            game->gameState = GAME_STATE_SCORE_ENTRY;
+            game->playerName[0] = '\0';
+            game->nameLength = 0;
+        }
+        return;
+    }
+    if (game->gameState == GAME_STATE_SCORE_ENTRY) {
+        int key = GetCharPressed();
+        while (key > 0) {
+            if (((key >= 32 && key <= 126) || (key >= 128 && key < 255)) && game->nameLength < MAX_NAME_LENGTH-1) {
+                game->playerName[game->nameLength++] = (char)key;
+                game->playerName[game->nameLength] = '\0';
+            }
+            key = GetCharPressed();
+        }
+        if (IsKeyPressed(KEY_BACKSPACE) && game->nameLength > 0) {
+            game->nameLength--;
+            game->playerName[game->nameLength] = '\0';
+        }
+        if (IsKeyPressed(KEY_ENTER) && game->nameLength > 0) {
+            AddScoreToScoreboard(game);
+            game->gameState = GAME_STATE_PLAYING;
+            *game = InitGame(game->screenWidth, game->screenHeight); // Restart game
+        }
+        return;
+    }
+    if (game->gameState == GAME_STATE_PLAYING) {
     // WASD 키 입력 처리 - 키를 누르고 있는 동안 계속 작동
     Vector2 direction = {0, 0};
     if (IsKeyDown(KEY_W)) direction = (Vector2){0, -1};
     if (IsKeyDown(KEY_S)) direction = (Vector2){0, 1};
     if (IsKeyDown(KEY_A)) direction = (Vector2){-1, 0};
     if (IsKeyDown(KEY_D)) direction = (Vector2){1, 0};
-
     // 방향키가 눌려있다면 해당 방향의 가장 가까운 파티클과 교체
     if (direction.x != 0 || direction.y != 0) {
         int nearestIndex = FindNearestParticleInDirection(game, direction);
@@ -106,25 +144,34 @@ void UpdateGame(Game* game) {
             SwapPlayerWithParticle(game, nearestIndex);
         }
     }
-    
     // 플레이어 업데이트 (방향키로 이동)
-    UpdatePlayer(&game->player, game->screenWidth, game->screenHeight, game->moveSpeed);
-    
-    // Enemy spawn and update
-    SpawnEnemyIfNeeded(game);
-    UpdateAllEnemies(game);
-    
+        UpdatePlayer(&game->player, game->screenWidth, game->screenHeight, game->moveSpeed, game->deltaTime);
+        // Enemy spawn and update
+        SpawnEnemyIfNeeded(game);
+        UpdateAllEnemies(game);
     // 스페이스바를 누르고 있는지 확인
     bool isSpacePressed = IsKeyDown(KEY_SPACE);
-    
     // 모든 파티클 업데이트
-    UpdateAllParticles(game, isSpacePressed);
-
-    // Enemy-Particle 충돌 체크 및 health 감소/삭제
-    ProcessEnemyCollisions(game);
-
+        UpdateAllParticles(game, isSpacePressed);
+        // Enemy-Particle 충돌 체크 및 health 감소/삭제
+        ProcessEnemyCollisions(game);
+        // 플레이어-적 충돌 체크
+        for (int i = 0; i < game->enemyCount; i++) {
+            float px = game->player.position.x + game->player.size/2;
+            float py = game->player.position.y + game->player.size/2;
+            // Ignore collision for first 0.5s after enemy spawn
+            if (GetTime() - game->enemies[i].spawnTime < 0.5f) continue;
+            if (CheckCollisionCircles((Vector2){px, py}, game->player.size/2, game->enemies[i].position, game->enemies[i].radius)) {
+                DamagePlayer(&game->player);
+                if (game->player.health <= 0) {
+                    game->gameState = GAME_STATE_OVER;
+                    break;
+    }
+            }
+        }
     // 폭발 파티클 업데이트
-    UpdateAllExplosionParticles(game);
+        UpdateAllExplosionParticles(game);
+    }
 }
 
 void DrawGame(Game game) {
@@ -146,12 +193,64 @@ void DrawGame(Game game) {
             DrawEnemy(game.enemies[i]);
         }
         
-        // 플레이어 그리기
-        DrawPlayer(game.player);
+        // 점수 표시
+        char scoreText[32];
+        sprintf(scoreText, "Score: %d", game.score);
+        DrawText(scoreText, 10, 10, 20, BLACK);
+        // 부스트 게이지 표시 (우상단)
+        int barW = 120, barH = 12;
+        int barX = game.screenWidth - barW - 10;
+        int barY = 10;
+        DrawRectangle(barX-2, barY-2, barW+4, barH+4, GRAY); // border
+        int boostW = (int)(barW * (game.player.boostGauge/BOOST_GAUGE_MAX));
+        DrawRectangle(barX, barY, boostW, barH, SKYBLUE);
+        DrawRectangleLines(barX-2, barY-2, barW+4, barH+4, DARKBLUE);
+        // UX: If boostGauge <= 50, gray out right half and show lock
+        if (game.player.boostGauge <= 50.0f) {
+            DrawRectangle(barX + barW/2, barY, barW/2, barH, (Color){180,180,180,180});
+            DrawText("BOOST LOCKED", barX + barW/2 - 8, barY - 18, 14, DARKGRAY);
+        }
+        // 체력(하트) 표시
+        for (int i = 0; i < game.player.health; i++) {
+            DrawRectangle(10 + i * 30, 40, 20, 20, RED);
+        }
+        
+        // 플레이어 그리기 (무적 시 깜빡임)
+        if (!game.player.isInvincible || ((int)(GetTime() * 10) % 2 == 0)) {
+            DrawRectangle(game.player.position.x, game.player.position.y, game.player.size, game.player.size, RED);
+        }
         
         // FPS 표시
-        DrawFPS(10, 10);
+        DrawFPS(10, 70);
         
+        // 게임 오버 화면
+        if (game.gameState == GAME_STATE_OVER) {
+            int sw = game.screenWidth;
+            int sh = game.screenHeight;
+            DrawText("GAME OVER", sw/2 - 100, sh/2 - 90, 40, RED);
+            char scoreText[64];
+            sprintf(scoreText, "Final Score: %d", game.score);
+            DrawText(scoreText, sw/2 - 100, sh/2 - 40, 30, BLACK);
+            DrawText("Press Enter to register your score!", sw/2 - 180, sh/2 + 10, 20, DARKGRAY);
+        }
+        if (game.gameState == GAME_STATE_SCORE_ENTRY) {
+            int sw = game.screenWidth;
+            int sh = game.screenHeight;
+            DrawText("Enter your name:", sw/2 - 120, sh/2 - 60, 30, BLACK);
+            DrawRectangle(sw/2 - 120, sh/2 - 20, 300, 40, LIGHTGRAY);
+            DrawText(game.playerName, sw/2 - 110, sh/2 - 10, 30, MAROON);
+            if ((int)(GetTime()*2)%2 == 0 && game.nameLength < MAX_NAME_LENGTH-1) {
+                DrawText("_", sw/2 - 110 + MeasureText(game.playerName, 30), sh/2 - 10, 30, MAROON);
+            }
+            DrawText("Press Enter to save", sw/2 - 120, sh/2 + 30, 20, DARKGRAY);
+            // Scoreboard display
+            DrawText("SCOREBOARD", sw/2 - 100, sh/2 + 70, 28, BLUE);
+            for (int i = 0; i < game.scoreboardCount; i++) {
+                char entry[64];
+                sprintf(entry, "%2d. %-15s %6d", i+1, game.scoreboard[i].name, game.scoreboard[i].score);
+                DrawText(entry, sw/2 - 100, sh/2 + 100 + i*28, 24, (i==0)?GOLD:BLACK);
+            }
+        }
     EndDrawing();
 }
 
@@ -165,4 +264,49 @@ void CleanupGame(Game* game) {
         free(game->enemies);
         game->enemies = NULL;
     }
+}
+
+ScoreboardResult LoadScoreboard(Game* game, const char* filename) {
+    FILE* f = fopen(filename, "r");
+    if (!f) return SCOREBOARD_FILE_ERROR;
+    game->scoreboardCount = 0;
+    while (fscanf(f, "%15s %d", game->scoreboard[game->scoreboardCount].name, &game->scoreboard[game->scoreboardCount].score) == 2) {
+        game->scoreboardCount++;
+        if (game->scoreboardCount >= MAX_SCOREBOARD_ENTRIES) break;
+    }
+    fclose(f);
+    return SCOREBOARD_OK;
+}
+
+ScoreboardResult SaveScoreboard(Game* game, const char* filename) {
+    FILE* f = fopen(filename, "w");
+    if (!f) return SCOREBOARD_FILE_ERROR;
+    for (int i = 0; i < game->scoreboardCount; i++) {
+        fprintf(f, "%s %d\n", game->scoreboard[i].name, game->scoreboard[i].score);
+    }
+    fclose(f);
+    return SCOREBOARD_OK;
+}
+
+void AddScoreToScoreboard(Game* game) {
+    // Add new entry
+    if (game->nameLength == 0) return;
+    ScoreEntry newEntry;
+    strncpy(newEntry.name, game->playerName, MAX_NAME_LENGTH);
+    newEntry.name[MAX_NAME_LENGTH-1] = '\0';
+    newEntry.score = game->score;
+    // Insert in sorted order (descending)
+    int pos = game->scoreboardCount;
+    for (int i = 0; i < game->scoreboardCount; i++) {
+        if (newEntry.score > game->scoreboard[i].score) {
+            pos = i;
+            break;
+        }
+    }
+    if (game->scoreboardCount < MAX_SCOREBOARD_ENTRIES) game->scoreboardCount++;
+    for (int i = game->scoreboardCount-1; i > pos; i--) {
+        game->scoreboard[i] = game->scoreboard[i-1];
+    }
+    game->scoreboard[pos] = newEntry;
+    SaveScoreboard(game, SCOREBOARD_FILENAME);
 } 

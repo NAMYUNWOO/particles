@@ -12,6 +12,20 @@
 #define PARTICLE_COUNT 100000  // Maximum number of particles
 #define DEFAULT_ATTRACTION_FORCE 1.0f  // Default force for particle attraction
 #define BOOSTED_ATTRACTION_FORCE 5.0f  // Boosted force when space key is pressed
+#define MAX_NAME_LENGTH 16
+#define MAX_SCOREBOARD_ENTRIES 10
+
+// Game state enum
+typedef enum {
+    GAME_STATE_PLAYING,
+    GAME_STATE_OVER,
+    GAME_STATE_SCORE_ENTRY
+} GameState;
+
+typedef struct {
+    char name[MAX_NAME_LENGTH];
+    int score;
+} ScoreEntry;
 
 // Game state structure
 typedef struct Game {
@@ -24,6 +38,8 @@ typedef struct Game {
     float deltaTime;
     float lastEnemySpawnTime;  // Time when last enemy was spawned
     int enemyCount;           // Current number of enemies
+    int score;                // Player score
+    GameState gameState;      // Current game state
     
     // Game entities
     Player player;
@@ -31,6 +47,11 @@ typedef struct Game {
     Enemy* enemies;  // Dynamic array of enemies
     ExplosionParticle explosionParticles[MAX_EXPLOSION_PARTICLES];
     int explosionParticleCount;
+    // Scoreboard
+    char playerName[MAX_NAME_LENGTH];
+    int nameLength;
+    ScoreEntry scoreboard[MAX_SCOREBOARD_ENTRIES];
+    int scoreboardCount;
 } Game;
 
 // Game initialization and cleanup
@@ -52,5 +73,11 @@ void UpdateAllParticles(Game* game, bool isSpacePressed);
 void UpdateAllExplosionParticles(Game* game);
 bool CheckCollisionEnemyParticle(Enemy enemy, Particle particle);
 void ProcessEnemyCollisions(Game* game);
+
+// Scoreboard functions
+typedef enum { SCOREBOARD_OK, SCOREBOARD_FILE_ERROR } ScoreboardResult;
+ScoreboardResult LoadScoreboard(Game* game, const char* filename);
+ScoreboardResult SaveScoreboard(Game* game, const char* filename);
+void AddScoreToScoreboard(Game* game);
 
 #endif // GAME_H 

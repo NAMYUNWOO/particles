@@ -17,16 +17,16 @@ typedef struct {
 } Enemy;
 
 // Constants
-#define MAX_ENEMIES 10          // Maximum number of enemies
-#define ENEMY_SPAWN_TIME 3.0f    // Spawn interval in seconds
+#define MAX_ENEMIES 20          // Maximum number of enemies
+#define ENEMY_SPAWN_TIME 0.8f    // Spawn interval in seconds
 #define ENEMY_MIN_SIZE 10.0f  // Minimum size multiplier compared to player
-#define ENEMY_MAX_SIZE 30.0f // Maximum size multiplier compared to player
+#define ENEMY_MAX_SIZE 20.0f // Maximum size multiplier compared to player
 
 // Enemy initialization
 Enemy InitEnemy(int screenWidth, int screenHeight);
 
 // Enemy update and render functions
-void UpdateEnemy(Enemy* enemy, int screenWidth, int screenHeight);
+void UpdateEnemy(Enemy* enemy, int screenWidth, int screenHeight, float deltaTime);
 void DrawEnemy(Enemy enemy);
 
 #endif // ENEMY_H 
