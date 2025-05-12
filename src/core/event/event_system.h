@@ -14,6 +14,17 @@ typedef enum {
     EVENT_KEY_PRESSED,
     EVENT_KEY_RELEASED,
     
+    // 적 관련 이벤트
+    EVENT_ENEMY_SPAWNED,
+    EVENT_ENEMY_DESTROYED,
+    EVENT_ENEMY_HEALTH_CHANGED,
+    EVENT_ENEMY_STATE_CHANGED,
+    
+    // 충돌 이벤트
+    EVENT_COLLISION_PARTICLE_ENEMY,
+    EVENT_COLLISION_PLAYER_ENEMY,
+    EVENT_COLLISION_PARTICLE_PARTICLE,
+    
     // 향후 추가 이벤트를 위한 자리
     
     EVENT_COUNT  // 이벤트 총 개수
@@ -47,4 +58,4 @@ void UnsubscribeFromEvent(EventType type, int listenerId);
 // 이벤트 큐 처리 (게임 루프에서 호출)
 void ProcessEventQueue(void);
 
-#endif // EVENT_SYSTEM_H 
+#endif // EVENT_SYSTEM_H

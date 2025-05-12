@@ -4,6 +4,9 @@
 #include "core/input_handler.h"
 #include <stdlib.h>
 
+// RegisterEnemyEventHandlers 함수 선언
+void RegisterEnemyEventHandlers(void);
+
 int main(void)
 {
     const int screenWidth = 800;
@@ -14,7 +17,9 @@ int main(void)
 
     // 이벤트 시스템 초기화
     InitEventSystem();
-    
+    // 적 이벤트 샘플 핸들러 등록
+    RegisterEnemyEventHandlers();
+
     Game game = InitGame(screenWidth, screenHeight);
     
     // 이벤트 시스템 사용 시 입력 핸들러 초기화

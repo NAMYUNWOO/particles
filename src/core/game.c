@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "event/event_system.h"
+#include "event/event_types.h"
 
 #define SCOREBOARD_FILENAME "scoreboard.txt"
 
@@ -141,21 +143,21 @@ void UpdateGame(Game* game) {
     if (game->gameState == GAME_STATE_PLAYING) {
     // 이벤트 시스템을 사용하지 않을 경우에만 직접 입력 처리
     if (!game->useEventSystem) {
-        // WASD 키 입력 처리 - 키를 누르고 있는 동안 계속 작동
-        Vector2 direction = {0, 0};
-        if (IsKeyDown(KEY_W)) direction = (Vector2){0, -1};
-        if (IsKeyDown(KEY_S)) direction = (Vector2){0, 1};
-        if (IsKeyDown(KEY_A)) direction = (Vector2){-1, 0};
-        if (IsKeyDown(KEY_D)) direction = (Vector2){1, 0};
-        // 방향키가 눌려있다면 해당 방향의 가장 가까운 파티클과 교체
-        if (direction.x != 0 || direction.y != 0) {
-            int nearestIndex = FindNearestParticleInDirection(game, direction);
-            if (nearestIndex != -1) {
-                SwapPlayerWithParticle(game, nearestIndex);
-            }
+    // WASD 키 입력 처리 - 키를 누르고 있는 동안 계속 작동
+    Vector2 direction = {0, 0};
+    if (IsKeyDown(KEY_W)) direction = (Vector2){0, -1};
+    if (IsKeyDown(KEY_S)) direction = (Vector2){0, 1};
+    if (IsKeyDown(KEY_A)) direction = (Vector2){-1, 0};
+    if (IsKeyDown(KEY_D)) direction = (Vector2){1, 0};
+    // 방향키가 눌려있다면 해당 방향의 가장 가까운 파티클과 교체
+    if (direction.x != 0 || direction.y != 0) {
+        int nearestIndex = FindNearestParticleInDirection(game, direction);
+        if (nearestIndex != -1) {
+            SwapPlayerWithParticle(game, nearestIndex);
         }
     }
-        // 플레이어 업데이트 (방향키로 이동)
+    }
+    // 플레이어 업데이트 (방향키로 이동)
         UpdatePlayer(&game->player, game->screenWidth, game->screenHeight, game->moveSpeed, game->deltaTime);
         // Enemy spawn and update
         SpawnEnemyIfNeeded(game);
@@ -166,7 +168,7 @@ void UpdateGame(Game* game) {
         isSpacePressed = IsKeyDown(KEY_SPACE);
         game->player.isBoosting = isSpacePressed;
     }
-        // 모든 파티클 업데이트
+    // 모든 파티클 업데이트
         UpdateAllParticles(game, game->player.isBoosting);
         // Enemy-Particle 충돌 체크 및 health 감소/삭제
         ProcessEnemyCollisions(game);
@@ -184,7 +186,7 @@ void UpdateGame(Game* game) {
     }
             }
         }
-        // 폭발 파티클 업데이트
+    // 폭발 파티클 업데이트
         UpdateAllExplosionParticles(game);
     }
 }
@@ -324,4 +326,33 @@ void AddScoreToScoreboard(Game* game) {
     }
     game->scoreboard[pos] = newEntry;
     SaveScoreboard(game, SCOREBOARD_FILENAME);
+}
+
+// 적 이벤트 샘플 핸들러
+static void OnEnemySpawned(const Event* event, void* context) {
+    EnemyEventData* data = (EnemyEventData*)event->data;
+    // printf("[이벤트] 적 생성: index=%d, ptr=%p\n", data->enemyIndex, data->enemyPtr);
+    free(data);
+}
+static void OnEnemyDestroyed(const Event* event, void* context) {
+    EnemyEventData* data = (EnemyEventData*)event->data;
+    // printf("[이벤트] 적 파괴: index=%d, ptr=%p\n", data->enemyIndex, data->enemyPtr);
+    free(data);
+}
+static void OnEnemyHealthChanged(const Event* event, void* context) {
+    EnemyHealthEventData* data = (EnemyHealthEventData*)event->data;
+    // printf("[이벤트] 적 체력 변화: index=%d, %.1f -> %.1f\n", data->enemyIndex, data->oldHealth, data->newHealth);
+    free(data);
+}
+static void OnEnemyStateChanged(const Event* event, void* context) {
+    EnemyStateEventData* data = (EnemyStateEventData*)event->data;
+    // printf("[이벤트] 적 상태 변화: index=%d, %d -> %d\n", data->enemyIndex, data->oldState, data->newState);
+    free(data);
+}
+
+void RegisterEnemyEventHandlers(void) {
+    SubscribeToEvent(EVENT_ENEMY_SPAWNED, OnEnemySpawned, NULL);
+    SubscribeToEvent(EVENT_ENEMY_DESTROYED, OnEnemyDestroyed, NULL);
+    SubscribeToEvent(EVENT_ENEMY_HEALTH_CHANGED, OnEnemyHealthChanged, NULL);
+    SubscribeToEvent(EVENT_ENEMY_STATE_CHANGED, OnEnemyStateChanged, NULL);
 } 
