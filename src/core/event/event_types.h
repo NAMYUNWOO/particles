@@ -42,6 +42,12 @@ typedef struct {
     float impact; // 충돌 강도(필요시)
 } CollisionEventData;
 
+// 게임 상태 변경 이벤트 데이터
+typedef struct {
+    int oldState;   // 이전 게임 상태
+    int newState;   // 새 게임 상태
+} GameStateEventData;
+
 // 향후 다른 이벤트 데이터 구조체는 여기에 추가
 
 #endif // EVENT_TYPES_H 

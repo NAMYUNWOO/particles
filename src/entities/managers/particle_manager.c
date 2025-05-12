@@ -1,8 +1,11 @@
 #include "particle_manager.h"
 #include "../../core/game.h"
 #include "../explosion.h"
+#include <stdio.h>
 
 void UpdateAllParticles(Game* game, bool isSpacePressed) {
+    // 디버그 메시지 제거
+    
     for (int i = 0; i < PARTICLE_COUNT; i++) {
         if (isSpacePressed) {
             AttractParticle(&game->particles[i], game->player.position, BOOSTED_ATTRACTION_FORCE);

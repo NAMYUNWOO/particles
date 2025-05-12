@@ -3,6 +3,7 @@
 #include "event/event_types.h"
 #include "raylib.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 // 방향키 목록
 static const int DIRECTION_KEYS[] = { KEY_W, KEY_A, KEY_S, KEY_D, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT };
@@ -57,11 +58,14 @@ static void HandlePlayerMovementInput(const Event* event, void* context) {
 // 스페이스바 이벤트 핸들러 (부스트 모드)
 static void HandleBoostInput(const Event* event, void* context) {
     Game* game = (Game*)context;
-    if (!game || game->gameState != GAME_STATE_PLAYING) return;
+    if (!game || game->gameState != GAME_STATE_PLAYING) {
+        return;
+    }
     
     KeyEventData* keyData = (KeyEventData*)event->data;
     
     if (keyData->keyCode == KEY_SPACE) {
+        // 상태 변경
         game->player.isBoosting = keyData->isPressed;
     }
 }

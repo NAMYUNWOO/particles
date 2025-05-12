@@ -106,10 +106,10 @@ void SwapPlayerWithParticle(Game* game, int particleIndex) {
 void UpdateGame(Game* game) {
     game->deltaTime = GetFrameTime();
     
-    // 이벤트 시스템 사용 시 입력 이벤트 처리
-    if (game->useEventSystem) {
-        ProcessInputEvents();
-    }
+    // 이벤트 시스템 사용 시 입력 이벤트 처리 - main.c에서 처리하므로 제거
+    // if (game->useEventSystem) {
+    //     ProcessInputEvents();
+    // }
     
     if (game->gameState == GAME_STATE_OVER) {
         // Enter name state on any key
@@ -117,6 +117,12 @@ void UpdateGame(Game* game) {
             game->gameState = GAME_STATE_SCORE_ENTRY;
             game->playerName[0] = '\0';
             game->nameLength = 0;
+            
+            // 게임 상태 변경 이벤트 발행
+            GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
+            stateData->oldState = GAME_STATE_OVER;
+            stateData->newState = GAME_STATE_SCORE_ENTRY;
+            PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
         }
         return;
     }
@@ -135,80 +141,75 @@ void UpdateGame(Game* game) {
         }
         if (IsKeyPressed(KEY_ENTER) && game->nameLength > 0) {
             AddScoreToScoreboard(game);
+            
+            // 게임 상태 변경 이벤트 발행
+            GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
+            stateData->oldState = GAME_STATE_SCORE_ENTRY;
+            stateData->newState = GAME_STATE_PLAYING;
+            PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
+            
             game->gameState = GAME_STATE_PLAYING;
             *game = InitGame(game->screenWidth, game->screenHeight); // Restart game
         }
         return;
     }
     if (game->gameState == GAME_STATE_PLAYING) {
-    // 이벤트 시스템을 사용하지 않을 경우에만 직접 입력 처리
-    if (!game->useEventSystem) {
-    // WASD 키 입력 처리 - 키를 누르고 있는 동안 계속 작동
-    Vector2 direction = {0, 0};
-    if (IsKeyDown(KEY_W)) direction = (Vector2){0, -1};
-    if (IsKeyDown(KEY_S)) direction = (Vector2){0, 1};
-    if (IsKeyDown(KEY_A)) direction = (Vector2){-1, 0};
-    if (IsKeyDown(KEY_D)) direction = (Vector2){1, 0};
-    // 방향키가 눌려있다면 해당 방향의 가장 가까운 파티클과 교체
-    if (direction.x != 0 || direction.y != 0) {
-        int nearestIndex = FindNearestParticleInDirection(game, direction);
-        if (nearestIndex != -1) {
-            SwapPlayerWithParticle(game, nearestIndex);
+        // 이벤트 시스템을 사용하지 않을 경우에만 직접 입력 처리
+        if (!game->useEventSystem) {
+            // WASD 키 입력 처리 - 키를 누르고 있는 동안 계속 작동
+            Vector2 direction = {0, 0};
+            if (IsKeyDown(KEY_W)) direction = (Vector2){0, -1};
+            if (IsKeyDown(KEY_S)) direction = (Vector2){0, 1};
+            if (IsKeyDown(KEY_A)) direction = (Vector2){-1, 0};
+            if (IsKeyDown(KEY_D)) direction = (Vector2){1, 0};
+            // 방향키가 눌려있다면 해당 방향의 가장 가까운 파티클과 교체
+            if (direction.x != 0 || direction.y != 0) {
+                int nearestIndex = FindNearestParticleInDirection(game, direction);
+                if (nearestIndex != -1) {
+                    SwapPlayerWithParticle(game, nearestIndex);
+                }
+            }
+            
+            // 직접 입력 방식에서만 스페이스 키 상태 직접 설정
+            bool isSpacePressed = IsKeyDown(KEY_SPACE);
+            game->player.isBoosting = isSpacePressed;
         }
-    }
-    }
-    // 플레이어 업데이트 (방향키로 이동)
+        
+        // 플레이어 업데이트 (방향키로 이동)
         UpdatePlayer(&game->player, game->screenWidth, game->screenHeight, game->moveSpeed, game->deltaTime);
+        
         // Enemy spawn and update
         SpawnEnemyIfNeeded(game);
         UpdateAllEnemies(game);
-    // 스페이스바를 누르고 있는지 확인 (이벤트 시스템 미사용 시)
-    bool isSpacePressed = IsKeyDown(KEY_SPACE);
-    game->player.isBoosting = isSpacePressed;
-    
-    if (!game->useEventSystem) {
-        printf("[디버그] 직접 입력 감지: IsKeyDown(KEY_SPACE) = %d\n", isSpacePressed);
-    } else {
-        // 이벤트 시스템 사용 시에도 스페이스 입력이 제대로 처리되지 않는 문제 해결을 위해
-        // 직접 입력을 확인하여 상태를 업데이트합니다
-        printf("[디버그] 이벤트+직접 입력 감지: 스페이스 = %d, isBoosting = %d\n", isSpacePressed, game->player.isBoosting);
-    }
-    
-    // 모든 파티클 업데이트
-    UpdateAllParticles(game, game->player.isBoosting);
-    
-    printf("[디버그] UpdateAllParticles 호출: game->player.isBoosting = %d\n", game->player.isBoosting);
+        
+        // 모든 파티클 업데이트 (이벤트 처리된 isBoosting 값 사용)
+        UpdateAllParticles(game, game->player.isBoosting);
 
-    // Enemy-Particle 충돌 체크 및 health 감소/삭제
-    ProcessEnemyCollisions(game);
-    // 플레이어-적 충돌 체크
-    for (int i = 0; i < game->enemyCount; i++) {
-        float px = game->player.position.x + game->player.size/2;
-        float py = game->player.position.y + game->player.size/2;
-        // Ignore collision for first 0.5s after enemy spawn
-        if (GetTime() - game->enemies[i].spawnTime < 0.5f) continue;
-        if (CheckCollisionCircles((Vector2){px, py}, game->player.size/2, game->enemies[i].position, game->enemies[i].radius)) {
-            // 플레이어-적 충돌 이벤트 발행
-            CollisionEventData* collisionData = malloc(sizeof(CollisionEventData));
-            collisionData->entityAIndex = 0; // 플레이어는 단일 엔티티이므로 인덱스는 0
-            collisionData->entityBIndex = i;
-            collisionData->entityAPtr = &game->player;
-            collisionData->entityBPtr = &game->enemies[i];
-            collisionData->entityAType = 2; // 2: 플레이어
-            collisionData->entityBType = 1; // 1: 적
-            collisionData->impact = 1.0f; // 플레이어-적 충돌은 치명적
-            PublishEvent(EVENT_COLLISION_PLAYER_ENEMY, collisionData);
-            
-            // 기존 처리 로직은 이벤트 핸들러로 이동할 예정이므로 주석 처리
-            // DamagePlayer(&game->player);
-            // if (game->player.health <= 0) {
-            //     game->gameState = GAME_STATE_OVER;
-            //     break;
-            // }
+        // Enemy-Particle 충돌 체크 및 이벤트 발행
+        ProcessEnemyCollisions(game);
+        
+        // 플레이어-적 충돌 체크
+        for (int i = 0; i < game->enemyCount; i++) {
+            float px = game->player.position.x + game->player.size/2;
+            float py = game->player.position.y + game->player.size/2;
+            // Ignore collision for first 0.5s after enemy spawn
+            if (GetTime() - game->enemies[i].spawnTime < 0.5f) continue;
+            if (CheckCollisionCircles((Vector2){px, py}, game->player.size/2, game->enemies[i].position, game->enemies[i].radius)) {
+                // 플레이어-적 충돌 이벤트 발행
+                CollisionEventData* collisionData = malloc(sizeof(CollisionEventData));
+                collisionData->entityAIndex = 0; // 플레이어는 단일 엔티티이므로 인덱스는 0
+                collisionData->entityBIndex = i;
+                collisionData->entityAPtr = &game->player;
+                collisionData->entityBPtr = &game->enemies[i];
+                collisionData->entityAType = 2; // 2: 플레이어
+                collisionData->entityBType = 1; // 1: 적
+                collisionData->impact = 1.0f; // 플레이어-적 충돌은 치명적
+                PublishEvent(EVENT_COLLISION_PLAYER_ENEMY, collisionData);
+            }
         }
-    }
-    // 폭발 파티클 업데이트
-    UpdateAllExplosionParticles(game);
+        
+        // 폭발 파티클 업데이트
+        UpdateAllExplosionParticles(game);
     }
 }
 
@@ -349,47 +350,51 @@ void AddScoreToScoreboard(Game* game) {
     SaveScoreboard(game, SCOREBOARD_FILENAME);
 }
 
-// 충돌 이벤트 핸들러
+// 게임 상태 변경 이벤트 핸들러
+static void OnGameStateChanged(const Event* event, void* context) {
+    GameStateEventData* data = (GameStateEventData*)event->data;
+    // 필요한 경우 추가적인 게임 상태 변경 로직 구현
+    
+    free(data);
+}
+
+// 충돌 이벤트 핸들러 - 파티클-적 충돌
 static void OnParticleEnemyCollision(const Event* event, void* context) {
     CollisionEventData* data = (CollisionEventData*)event->data;
     
     // 누적된 충돌 영향력 처리 (체력은 physics.c에서 이미 감소시켰으므로 여기서는 처리하지 않음)
     // 추가적인 특수 효과나 로직이 필요하면 여기에 구현
     
-    // printf("[이벤트] 파티클-적 충돌: 적=%d, 누적충돌=%d, impact=%.3f\n", 
-    //       data->entityBIndex, (int)(data->impact / PARTICLE_ENEMY_DAMAGE), data->impact);
-    
     free(data);
 }
 
+// 플레이어-적 충돌 이벤트 핸들러
 static void OnPlayerEnemyCollision(const Event* event, void* context) {
     Game* game = (Game*)context;
     CollisionEventData* data = (CollisionEventData*)event->data;
     
-    Player* player = (Player*)data->entityAPtr;
-    // 플레이어-적 충돌 처리
-    DamagePlayer(player);
-    if (player->health <= 0) {
+    // 플레이어 피해 적용
+    DamagePlayer(&game->player);
+    
+    // 플레이어 사망 처리
+    if (game->player.health <= 0) {
+        // 게임 오버 상태로 전환
         game->gameState = GAME_STATE_OVER;
+        
+        // 게임 상태 변경 이벤트 발행
+        GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
+        stateData->oldState = GAME_STATE_PLAYING;
+        stateData->newState = GAME_STATE_OVER;
+        PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
     }
     
-    // printf("[이벤트] 플레이어-적 충돌: playerHealth=%d\n", player->health);
-    
-    free(data);
-}
-
-static void OnParticleParticleCollision(const Event* event, void* context) {
-    CollisionEventData* data = (CollisionEventData*)event->data;
-    // 파티클-파티클 충돌 처리 (필요한 경우)
-    // printf("[이벤트] 파티클-파티클 충돌: particleA=%d, particleB=%d\n", 
-    //       data->entityAIndex, data->entityBIndex);
     free(data);
 }
 
 void RegisterCollisionEventHandlers(Game* game) {
     SubscribeToEvent(EVENT_COLLISION_PARTICLE_ENEMY, OnParticleEnemyCollision, game);
     SubscribeToEvent(EVENT_COLLISION_PLAYER_ENEMY, OnPlayerEnemyCollision, game);
-    SubscribeToEvent(EVENT_COLLISION_PARTICLE_PARTICLE, OnParticleParticleCollision, game);
+    SubscribeToEvent(EVENT_GAME_STATE_CHANGED, OnGameStateChanged, game);
 }
 
 // 적 이벤트 샘플 핸들러

@@ -25,6 +25,9 @@ typedef enum {
     EVENT_COLLISION_PLAYER_ENEMY,
     EVENT_COLLISION_PARTICLE_PARTICLE,
     
+    // 게임 상태 이벤트
+    EVENT_GAME_STATE_CHANGED,
+    
     // 향후 추가 이벤트를 위한 자리
     
     EVENT_COUNT  // 이벤트 총 개수
