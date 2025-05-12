@@ -1,5 +1,6 @@
 #include "game.h"
 #include "input_handler.h"
+#include "physics.h"
 #include <math.h>
 #include <time.h>
 #include <stdlib.h>
@@ -7,13 +8,27 @@
 #include <string.h>
 #include "event/event_system.h"
 #include "event/event_types.h"
+#include "memory_pool.h"
 
 #define SCOREBOARD_FILENAME "scoreboard.txt"
+
+// 외부 메모리 풀 참조 선언
+extern MemoryPool g_collisionEventPool;
+extern MemoryPool g_enemyEventPool;
+extern MemoryPool g_enemyHealthEventPool;
+extern MemoryPool g_gameStateEventPool;
+extern MemoryPool g_enemyStateEventPool;
 
 // Initialize game state and resources
 Game InitGame(int screenWidth, int screenHeight) {
     // 랜덤 시드 초기화
     SetRandomSeed(time(NULL));
+    
+    // 이벤트 시스템 초기화
+    InitEventSystem();
+    
+    // 물리 시스템 메모리 풀 초기화
+    InitPhysicsMemoryPools();
     
     Game game = {
         .screenWidth = screenWidth,
@@ -195,16 +210,18 @@ void UpdateGame(Game* game) {
             // Ignore collision for first 0.5s after enemy spawn
             if (GetTime() - game->enemies[i].spawnTime < 0.5f) continue;
             if (CheckCollisionCircles((Vector2){px, py}, game->player.size/2, game->enemies[i].position, game->enemies[i].radius)) {
-                // 플레이어-적 충돌 이벤트 발행
-                CollisionEventData* collisionData = malloc(sizeof(CollisionEventData));
-                collisionData->entityAIndex = 0; // 플레이어는 단일 엔티티이므로 인덱스는 0
-                collisionData->entityBIndex = i;
-                collisionData->entityAPtr = &game->player;
-                collisionData->entityBPtr = &game->enemies[i];
-                collisionData->entityAType = 2; // 2: 플레이어
-                collisionData->entityBType = 1; // 1: 적
-                collisionData->impact = 1.0f; // 플레이어-적 충돌은 치명적
-                PublishEvent(EVENT_COLLISION_PLAYER_ENEMY, collisionData);
+                // 플레이어-적 충돌 이벤트 발행 (메모리 풀 사용)
+                CollisionEventData* collisionData = MemoryPool_Alloc(&g_collisionEventPool);
+                if (collisionData) {
+                    collisionData->entityAIndex = 0; // 플레이어는 단일 엔티티이므로 인덱스는 0
+                    collisionData->entityBIndex = i;
+                    collisionData->entityAPtr = &game->player;
+                    collisionData->entityBPtr = &game->enemies[i];
+                    collisionData->entityAType = 2; // 2: 플레이어
+                    collisionData->entityBType = 1; // 1: 적
+                    collisionData->impact = 1.0f; // 플레이어-적 충돌은 치명적
+                    PublishEvent(EVENT_COLLISION_PLAYER_ENEMY, collisionData);
+                }
             }
         }
         
@@ -295,14 +312,21 @@ void DrawGame(Game game) {
 
 // 게임 종료 시 메모리 해제
 void CleanupGame(Game* game) {
-    if (game->particles != NULL) {
+    if (game->particles) {
         free(game->particles);
         game->particles = NULL;
     }
-    if (game->enemies != NULL) {
+    
+    if (game->enemies) {
         free(game->enemies);
         game->enemies = NULL;
     }
+    
+    // 물리 시스템 메모리 풀 정리
+    CleanupPhysicsMemoryPools();
+    
+    // 이벤트 시스템 정리
+    CleanupEventSystem();
 }
 
 ScoreboardResult LoadScoreboard(Game* game, const char* filename) {
@@ -350,12 +374,35 @@ void AddScoreToScoreboard(Game* game) {
     SaveScoreboard(game, SCOREBOARD_FILENAME);
 }
 
+// 전방 선언
+static void OnGameStateChanged(const Event* event, void* context);
+static void OnParticleEnemyCollision(const Event* event, void* context);
+static void OnPlayerEnemyCollision(const Event* event, void* context);
+static void OnEnemySpawned(const Event* event, void* context);
+static void OnEnemyDestroyed(const Event* event, void* context);
+static void OnEnemyHealthChanged(const Event* event, void* context);
+static void OnEnemyStateChanged(const Event* event, void* context);
+
+// 메모리 풀 유효성 확인 함수
+static bool IsFromMemoryPool(MemoryPool* pool, void* ptr) {
+    if (!pool || !ptr || !pool->blocks) return false;
+    
+    char* poolStart = (char*)pool->blocks;
+    char* poolEnd = poolStart + (pool->capacity * pool->blockSize);
+    
+    return (char*)ptr >= poolStart && (char*)ptr < poolEnd;
+}
+
 // 게임 상태 변경 이벤트 핸들러
 static void OnGameStateChanged(const Event* event, void* context) {
     GameStateEventData* data = (GameStateEventData*)event->data;
-    // 필요한 경우 추가적인 게임 상태 변경 로직 구현
     
-    free(data);
+    // 메모리 풀 체크 후 반환
+    if (IsFromMemoryPool(&g_gameStateEventPool, data)) {
+        MemoryPool_Free(&g_gameStateEventPool, data);
+    } else {
+        free(data);
+    }
 }
 
 // 충돌 이벤트 핸들러 - 파티클-적 충돌
@@ -365,7 +412,12 @@ static void OnParticleEnemyCollision(const Event* event, void* context) {
     // 누적된 충돌 영향력 처리 (체력은 physics.c에서 이미 감소시켰으므로 여기서는 처리하지 않음)
     // 추가적인 특수 효과나 로직이 필요하면 여기에 구현
     
-    free(data);
+    // 메모리 풀 체크 후 반환
+    if (IsFromMemoryPool(&g_collisionEventPool, data)) {
+        MemoryPool_Free(&g_collisionEventPool, data);
+    } else {
+        free(data); // 풀에서 할당되지 않은 경우 일반 free 사용
+    }
 }
 
 // 플레이어-적 충돌 이벤트 핸들러
@@ -381,14 +433,19 @@ static void OnPlayerEnemyCollision(const Event* event, void* context) {
         // 게임 오버 상태로 전환
         game->gameState = GAME_STATE_OVER;
         
-        // 게임 상태 변경 이벤트 발행
+        // 게임 상태 변경 이벤트 발행 (나중에 메모리 풀로 교체)
         GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
         stateData->oldState = GAME_STATE_PLAYING;
         stateData->newState = GAME_STATE_OVER;
         PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
     }
     
-    free(data);
+    // 메모리 풀 체크 후 반환
+    if (IsFromMemoryPool(&g_collisionEventPool, data)) {
+        MemoryPool_Free(&g_collisionEventPool, data);
+    } else {
+        free(data);
+    }
 }
 
 void RegisterCollisionEventHandlers(Game* game) {
@@ -400,23 +457,47 @@ void RegisterCollisionEventHandlers(Game* game) {
 // 적 이벤트 샘플 핸들러
 static void OnEnemySpawned(const Event* event, void* context) {
     EnemyEventData* data = (EnemyEventData*)event->data;
-    // printf("[이벤트] 적 생성: index=%d, ptr=%p\n", data->enemyIndex, data->enemyPtr);
-    free(data);
+    
+    // 메모리 풀 체크 후 반환
+    if (IsFromMemoryPool(&g_enemyEventPool, data)) {
+        MemoryPool_Free(&g_enemyEventPool, data);
+    } else {
+        free(data);
+    }
 }
+
 static void OnEnemyDestroyed(const Event* event, void* context) {
     EnemyEventData* data = (EnemyEventData*)event->data;
-    // printf("[이벤트] 적 파괴: index=%d, ptr=%p\n", data->enemyIndex, data->enemyPtr);
-    free(data);
+    
+    // 메모리 풀 체크 후 반환
+    if (IsFromMemoryPool(&g_enemyEventPool, data)) {
+        MemoryPool_Free(&g_enemyEventPool, data);
+    } else {
+        free(data);
+    }
 }
+
 static void OnEnemyHealthChanged(const Event* event, void* context) {
     EnemyHealthEventData* data = (EnemyHealthEventData*)event->data;
-    // printf("[이벤트] 적 체력 변화: index=%d, %.1f -> %.1f\n", data->enemyIndex, data->oldHealth, data->newHealth);
-    free(data);
+    
+    // 메모리 풀 체크 후 반환
+    if (IsFromMemoryPool(&g_enemyHealthEventPool, data)) {
+        MemoryPool_Free(&g_enemyHealthEventPool, data);
+    } else {
+        free(data);
+    }
 }
+
+// 적 상태 변경 이벤트 핸들러
 static void OnEnemyStateChanged(const Event* event, void* context) {
     EnemyStateEventData* data = (EnemyStateEventData*)event->data;
-    // printf("[이벤트] 적 상태 변화: index=%d, %d -> %d\n", data->enemyIndex, data->oldState, data->newState);
-    free(data);
+    
+    // 메모리 풀 체크 후 반환
+    if (IsFromMemoryPool(&g_enemyStateEventPool, data)) {
+        MemoryPool_Free(&g_enemyStateEventPool, data);
+    } else {
+        free(data);
+    }
 }
 
 void RegisterEnemyEventHandlers(void) {

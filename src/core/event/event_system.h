@@ -2,6 +2,7 @@
 #define EVENT_SYSTEM_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include "raylib.h"
 
 // 이벤트 타입 정의 (점진적으로 확장 가능)
@@ -60,5 +61,11 @@ void UnsubscribeFromEvent(EventType type, int listenerId);
 
 // 이벤트 큐 처리 (게임 루프에서 호출)
 void ProcessEventQueue(void);
+
+// 메모리 풀 기반 이벤트 데이터 관리 함수
+void InitEventMemoryPool(void);
+void DestroyEventMemoryPool(void);
+void* AllocEventData(size_t size);
+void FreeEventData(void* ptr);
 
 #endif // EVENT_SYSTEM_H

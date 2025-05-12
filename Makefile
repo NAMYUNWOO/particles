@@ -21,6 +21,7 @@ SRC_FILES = $(SRC_DIR)/main.c \
             $(CORE_DIR)/game.c \
             $(CORE_DIR)/physics.c \
             $(CORE_DIR)/input_handler.c \
+            $(CORE_DIR)/memory_pool.c \
             $(CORE_DIR)/event/event_system.c \
             $(ENTITIES_DIR)/player.c \
             $(ENTITIES_DIR)/particle.c \

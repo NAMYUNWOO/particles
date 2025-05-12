@@ -1,4 +1,5 @@
 #include "event_system.h"
+#include "../memory_pool.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -6,6 +7,8 @@
 
 #define MAX_LISTENERS_PER_EVENT 16
 #define MAX_EVENT_QUEUE_SIZE 1024
+#define EVENT_DATA_POOL_BLOCK_SIZE 64
+#define EVENT_DATA_POOL_CAPACITY 1024
 
 // 이벤트 리스너 구조체
 typedef struct {
@@ -30,16 +33,48 @@ static struct {
     bool initialized;
 } eventSystem;
 
+// 이벤트 데이터를 위한 메모리 풀
+static MemoryPool g_eventDataPool;
+
+void InitEventMemoryPool(void) {
+    MemoryPool_Init(&g_eventDataPool, EVENT_DATA_POOL_BLOCK_SIZE, EVENT_DATA_POOL_CAPACITY);
+}
+
+void DestroyEventMemoryPool(void) {
+    MemoryPool_Destroy(&g_eventDataPool);
+}
+
+void* AllocEventData(size_t size) {
+    if (size > EVENT_DATA_POOL_BLOCK_SIZE) {
+        // 크기가 너무 큰 경우 일반 malloc 사용
+        return malloc(size);
+    }
+    return MemoryPool_Alloc(&g_eventDataPool);
+}
+
+void FreeEventData(void* ptr) {
+    // 메모리 풀 범위 내인지 확인
+    char* poolStart = (char*)g_eventDataPool.blocks;
+    char* poolEnd = poolStart + g_eventDataPool.blockSize * g_eventDataPool.capacity;
+    if ((char*)ptr >= poolStart && (char*)ptr < poolEnd) {
+        MemoryPool_Free(&g_eventDataPool, ptr);
+    } else {
+        free(ptr);
+    }
+}
+
 // 이벤트 시스템 초기화
 void InitEventSystem(void) {
     memset(&eventSystem, 0, sizeof(eventSystem));
     eventSystem.initialized = true;
+    InitEventMemoryPool();
     printf("Event system initialized\n");
 }
 
 // 이벤트 시스템 정리
 void CleanupEventSystem(void) {
     memset(&eventSystem, 0, sizeof(eventSystem));
+    DestroyEventMemoryPool();
     printf("Event system cleaned up\n");
 }
 
