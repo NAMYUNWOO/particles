@@ -6,35 +6,38 @@ Player InitPlayer(int screenWidth, int screenHeight) {
         .size = PLAYER_BASE_SIZE,
         .health = 3,
         .invincibleTimer = 0.0f,
-        .isInvincible = false
+        .isInvincible = false,
+        .boostGauge = BOOST_GAUGE_MAX,
+        .isBoosting = false
     };
     return player;
 }
 
 void UpdatePlayer(Player* player, int screenWidth, int screenHeight, int moveSpeed, float deltaTime) {
-    // Boost logic
+    // Boost logic - isBoosting은 더 이상 여기서 변경되지 않고 외부에서 관리됨
     float speed = moveSpeed;
-    bool shiftHeld = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
-    if (player->isBoosting) {
-        // Continue boosting as long as shift is held and gauge > 0
-        if (shiftHeld && player->boostGauge > 0.0f) {
-            speed = moveSpeed * 2.5f;
-            player->boostGauge -= BOOST_GAUGE_CONSUME * deltaTime;
-            if (player->boostGauge < 0.0f) player->boostGauge = 0.0f;
-        } else {
-            player->isBoosting = false;
-        }
-    } else if (shiftHeld && player->boostGauge > 50.0f) {
-        // Start boosting only if gauge > 50
-        player->isBoosting = true;
+    
+    // isBoosting 상태에 따라 속도와 게이지 조절
+    if (player->isBoosting && player->boostGauge > 0.0f) {
+        // 부스트 게이지가 있으면 부스트 속도 적용
         speed = moveSpeed * 2.5f;
         player->boostGauge -= BOOST_GAUGE_CONSUME * deltaTime;
-        if (player->boostGauge < 0.0f) player->boostGauge = 0.0f;
+        if (player->boostGauge < 0.0f) {
+            player->boostGauge = 0.0f;
+            // 게이지가 고갈되면 부스트 상태 종료
+            player->isBoosting = false;
+        }
+    } else if (player->isBoosting && player->boostGauge <= 0.0f) {
+        // 부스트 게이지가 고갈되면 부스트 중지
+        player->isBoosting = false;
     }
+    
+    // 부스트 중이 아닐 때 게이지 회복
     if (!player->isBoosting) {
         player->boostGauge += BOOST_GAUGE_REGEN * deltaTime;
         if (player->boostGauge > BOOST_GAUGE_MAX) player->boostGauge = BOOST_GAUGE_MAX;
     }
+    
     // Move the square with arrow keys
     if (IsKeyDown(KEY_RIGHT)) player->position.x += speed;
     if (IsKeyDown(KEY_LEFT)) player->position.x -= speed;
