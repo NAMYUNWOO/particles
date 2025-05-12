@@ -9,8 +9,8 @@
 static const int DIRECTION_KEYS[] = { KEY_W, KEY_A, KEY_S, KEY_D, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT };
 static const int DIRECTION_KEY_COUNT = 8;
 
-// 액션키 목록
-static const int ACTION_KEYS[] = { KEY_SPACE, KEY_Q };
+// 액션키 목록 (스페이스바와 Left Shift 키)
+static const int ACTION_KEYS[] = { KEY_SPACE, KEY_LEFT_SHIFT };
 static const int ACTION_KEY_COUNT = 2;
 
 // 키 입력 이벤트 핸들러 (플레이어 이동)
@@ -23,40 +23,13 @@ static void HandlePlayerMovementInput(const Event* event, void* context) {
     // 키가 눌렸을 때만 처리
     if (!keyData->isPressed) return;
     
-    Vector2 direction = {0, 0};
-    
-    // 방향 결정
-    switch (keyData->keyCode) {
-        case KEY_W:
-        case KEY_UP:
-            direction = (Vector2){0, -1};
-            break;
-        case KEY_S:
-        case KEY_DOWN:
-            direction = (Vector2){0, 1};
-            break;
-        case KEY_A:
-        case KEY_LEFT:
-            direction = (Vector2){-1, 0};
-            break;
-        case KEY_D:
-        case KEY_RIGHT:
-            direction = (Vector2){1, 0};
-            break;
-        default:
-            return; // 방향키가 아니면 무시
-    }
-    
-    // 여기서는 기존 함수들을 호출하여 플레이어를 움직임
-    // 점진적 마이그레이션 중이므로 아직 기존 코드 사용
-    int nearestIndex = FindNearestParticleInDirection(game, direction);
-    if (nearestIndex != -1) {
-        SwapPlayerWithParticle(game, nearestIndex);
-    }
+    // 주의: 이 함수는 키가 처음 눌렸을 때만 호출됩니다.
+    // 실제 이동은 UpdatePlayer에서 IsKeyDown으로 처리됩니다.
+    // 따라서 여기서는 별도의 이동 처리를 하지 않습니다.
 }
 
-// 스페이스바 이벤트 핸들러 (부스트 모드)
-static void HandleBoostInput(const Event* event, void* context) {
+// 스페이스바와 Left Shift 이벤트 핸들러
+static void HandleActionInput(const Event* event, void* context) {
     Game* game = (Game*)context;
     if (!game || game->gameState != GAME_STATE_PLAYING) {
         return;
@@ -65,8 +38,11 @@ static void HandleBoostInput(const Event* event, void* context) {
     KeyEventData* keyData = (KeyEventData*)event->data;
     
     if (keyData->keyCode == KEY_SPACE) {
-        // 상태 변경
+        // 부스트 상태 변경
         game->player.isBoosting = keyData->isPressed;
+    } else if (keyData->keyCode == KEY_LEFT_SHIFT) {
+        // 스피드 부스트 상태 변경
+        game->player.isSpeedBoosting = keyData->isPressed;
     }
 }
 
@@ -82,8 +58,8 @@ static void CleanupEventData(const Event* event, void* context) {
 void InitInputHandler(Game* game) {
     // 입력 이벤트 핸들러 등록
     SubscribeToEvent(EVENT_KEY_PRESSED, HandlePlayerMovementInput, game);
-    SubscribeToEvent(EVENT_KEY_PRESSED, HandleBoostInput, game);
-    SubscribeToEvent(EVENT_KEY_RELEASED, HandleBoostInput, game);
+    SubscribeToEvent(EVENT_KEY_PRESSED, HandleActionInput, game);
+    SubscribeToEvent(EVENT_KEY_RELEASED, HandleActionInput, game);
     
     // 이벤트 데이터 정리를 위한 이벤트 핸들러 등록
     // 이 핸들러는 다른 모든 핸들러가 실행된 후에 실행되어야 함

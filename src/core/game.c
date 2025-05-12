@@ -171,23 +171,11 @@ void UpdateGame(Game* game) {
     if (game->gameState == GAME_STATE_PLAYING) {
         // 이벤트 시스템을 사용하지 않을 경우에만 직접 입력 처리
         if (!game->useEventSystem) {
-            // WASD 키 입력 처리 - 키를 누르고 있는 동안 계속 작동
-            Vector2 direction = {0, 0};
-            if (IsKeyDown(KEY_W)) direction = (Vector2){0, -1};
-            if (IsKeyDown(KEY_S)) direction = (Vector2){0, 1};
-            if (IsKeyDown(KEY_A)) direction = (Vector2){-1, 0};
-            if (IsKeyDown(KEY_D)) direction = (Vector2){1, 0};
-            // 방향키가 눌려있다면 해당 방향의 가장 가까운 파티클과 교체
-            if (direction.x != 0 || direction.y != 0) {
-                int nearestIndex = FindNearestParticleInDirection(game, direction);
-                if (nearestIndex != -1) {
-                    SwapPlayerWithParticle(game, nearestIndex);
-                }
-            }
-            
-            // 직접 입력 방식에서만 스페이스 키 상태 직접 설정
+            // 직접 입력 방식에서만 키 상태 직접 설정
             bool isSpacePressed = IsKeyDown(KEY_SPACE);
+            bool isShiftPressed = IsKeyDown(KEY_LEFT_SHIFT);
             game->player.isBoosting = isSpacePressed;
+            game->player.isSpeedBoosting = isShiftPressed;
         }
         
         // 플레이어 업데이트 (방향키로 이동)

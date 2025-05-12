@@ -18,7 +18,8 @@ typedef struct {
     float invincibleTimer; // Invincibility timer
     bool isInvincible; // Invincibility flag
     float boostGauge;  // Boost gauge (0~BOOST_GAUGE_MAX)
-    bool isBoosting;   // Boosting flag
+    bool isBoosting;   // Boosting flag (파티클 끌어당김)
+    bool isSpeedBoosting; // Speed boosting flag (이동 속도 증가)
 } Player;
 
 // Initialize player
