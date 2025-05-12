@@ -342,15 +342,13 @@ void AddScoreToScoreboard(Game* game) {
 
 // 충돌 이벤트 핸들러
 static void OnParticleEnemyCollision(const Event* event, void* context) {
-    Game* game = (Game*)context;
     CollisionEventData* data = (CollisionEventData*)event->data;
     
-    Enemy* enemy = (Enemy*)data->entityBPtr;
-    // 파티클-적 충돌 처리
-    enemy->health -= data->impact;
+    // 누적된 충돌 영향력 처리 (체력은 physics.c에서 이미 감소시켰으므로 여기서는 처리하지 않음)
+    // 추가적인 특수 효과나 로직이 필요하면 여기에 구현
     
-    // printf("[이벤트] 파티클-적 충돌: particle=%d, enemy=%d, impact=%.3f\n", 
-    //       data->entityAIndex, data->entityBIndex, data->impact);
+    // printf("[이벤트] 파티클-적 충돌: 적=%d, 누적충돌=%d, impact=%.3f\n", 
+    //       data->entityBIndex, (int)(data->impact / PARTICLE_ENEMY_DAMAGE), data->impact);
     
     free(data);
 }

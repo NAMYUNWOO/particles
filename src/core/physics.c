@@ -15,22 +15,27 @@ void ProcessEnemyCollisions(Game* game) {
     int e = 0;
     while (e < game->enemyCount) {
         float prevHealth = game->enemies[e].health;
+        int collisionCount = 0;  // 충돌 발생 횟수 추적
+        
         for (int p = 0; p < PARTICLE_COUNT; p++) {
             if (CheckCollisionEnemyParticle(game->enemies[e], game->particles[p])) {
-                // 충돌 감지 시 파티클-적 충돌 이벤트 발행
-                CollisionEventData* collisionData = malloc(sizeof(CollisionEventData));
-                collisionData->entityAIndex = p;
-                collisionData->entityBIndex = e;
-                collisionData->entityAPtr = &game->particles[p];
-                collisionData->entityBPtr = &game->enemies[e];
-                collisionData->entityAType = 0; // 0: 파티클
-                collisionData->entityBType = 1; // 1: 적
-                collisionData->impact = PARTICLE_ENEMY_DAMAGE; // 충돌 강도
-                PublishEvent(EVENT_COLLISION_PARTICLE_ENEMY, collisionData);
-                
-                // 기존 처리 로직은 이벤트 핸들러로 이동할 예정이므로 주석 처리
-                // game->enemies[e].health -= PARTICLE_ENEMY_DAMAGE;
+                // 기존: 매 충돌마다 이벤트 발행 대신 직접 체력 감소
+                game->enemies[e].health -= PARTICLE_ENEMY_DAMAGE;
+                collisionCount++;
             }
+        }
+        
+        // 충돌이 발생했다면 한 번의 누적 이벤트만 발행
+        if (collisionCount > 0) {
+            CollisionEventData* collisionData = malloc(sizeof(CollisionEventData));
+            collisionData->entityAIndex = -1;  // 다수의 파티클이므로 -1로 설정
+            collisionData->entityBIndex = e;
+            collisionData->entityAPtr = NULL;  // 다수의 파티클이므로 NULL
+            collisionData->entityBPtr = &game->enemies[e];
+            collisionData->entityAType = 0; // 0: 파티클
+            collisionData->entityBType = 1; // 1: 적
+            collisionData->impact = PARTICLE_ENEMY_DAMAGE * collisionCount; // 누적 충돌 강도
+            PublishEvent(EVENT_COLLISION_PARTICLE_ENEMY, collisionData);
         }
         
         // 체력 변화 이벤트 발행 (기존 코드 유지)

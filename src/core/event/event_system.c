@@ -5,7 +5,7 @@
 #include "raylib.h"
 
 #define MAX_LISTENERS_PER_EVENT 16
-#define MAX_EVENT_QUEUE_SIZE 64
+#define MAX_EVENT_QUEUE_SIZE 1024
 
 // 이벤트 리스너 구조체
 typedef struct {
