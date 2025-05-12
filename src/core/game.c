@@ -163,43 +163,52 @@ void UpdateGame(Game* game) {
         SpawnEnemyIfNeeded(game);
         UpdateAllEnemies(game);
     // 스페이스바를 누르고 있는지 확인 (이벤트 시스템 미사용 시)
-    bool isSpacePressed = false;
+    bool isSpacePressed = IsKeyDown(KEY_SPACE);
+    game->player.isBoosting = isSpacePressed;
+    
     if (!game->useEventSystem) {
-        isSpacePressed = IsKeyDown(KEY_SPACE);
-        game->player.isBoosting = isSpacePressed;
+        printf("[디버그] 직접 입력 감지: IsKeyDown(KEY_SPACE) = %d\n", isSpacePressed);
+    } else {
+        // 이벤트 시스템 사용 시에도 스페이스 입력이 제대로 처리되지 않는 문제 해결을 위해
+        // 직접 입력을 확인하여 상태를 업데이트합니다
+        printf("[디버그] 이벤트+직접 입력 감지: 스페이스 = %d, isBoosting = %d\n", isSpacePressed, game->player.isBoosting);
     }
+    
     // 모든 파티클 업데이트
-        UpdateAllParticles(game, game->player.isBoosting);
-        // Enemy-Particle 충돌 체크 및 health 감소/삭제
-        ProcessEnemyCollisions(game);
-        // 플레이어-적 충돌 체크
-        for (int i = 0; i < game->enemyCount; i++) {
-            float px = game->player.position.x + game->player.size/2;
-            float py = game->player.position.y + game->player.size/2;
-            // Ignore collision for first 0.5s after enemy spawn
-            if (GetTime() - game->enemies[i].spawnTime < 0.5f) continue;
-            if (CheckCollisionCircles((Vector2){px, py}, game->player.size/2, game->enemies[i].position, game->enemies[i].radius)) {
-                // 플레이어-적 충돌 이벤트 발행
-                CollisionEventData* collisionData = malloc(sizeof(CollisionEventData));
-                collisionData->entityAIndex = 0; // 플레이어는 단일 엔티티이므로 인덱스는 0
-                collisionData->entityBIndex = i;
-                collisionData->entityAPtr = &game->player;
-                collisionData->entityBPtr = &game->enemies[i];
-                collisionData->entityAType = 2; // 2: 플레이어
-                collisionData->entityBType = 1; // 1: 적
-                collisionData->impact = 1.0f; // 플레이어-적 충돌은 치명적
-                PublishEvent(EVENT_COLLISION_PLAYER_ENEMY, collisionData);
-                
-                // 기존 처리 로직은 이벤트 핸들러로 이동할 예정이므로 주석 처리
-                // DamagePlayer(&game->player);
-                // if (game->player.health <= 0) {
-                //     game->gameState = GAME_STATE_OVER;
-                //     break;
-                // }
-            }
+    UpdateAllParticles(game, game->player.isBoosting);
+    
+    printf("[디버그] UpdateAllParticles 호출: game->player.isBoosting = %d\n", game->player.isBoosting);
+
+    // Enemy-Particle 충돌 체크 및 health 감소/삭제
+    ProcessEnemyCollisions(game);
+    // 플레이어-적 충돌 체크
+    for (int i = 0; i < game->enemyCount; i++) {
+        float px = game->player.position.x + game->player.size/2;
+        float py = game->player.position.y + game->player.size/2;
+        // Ignore collision for first 0.5s after enemy spawn
+        if (GetTime() - game->enemies[i].spawnTime < 0.5f) continue;
+        if (CheckCollisionCircles((Vector2){px, py}, game->player.size/2, game->enemies[i].position, game->enemies[i].radius)) {
+            // 플레이어-적 충돌 이벤트 발행
+            CollisionEventData* collisionData = malloc(sizeof(CollisionEventData));
+            collisionData->entityAIndex = 0; // 플레이어는 단일 엔티티이므로 인덱스는 0
+            collisionData->entityBIndex = i;
+            collisionData->entityAPtr = &game->player;
+            collisionData->entityBPtr = &game->enemies[i];
+            collisionData->entityAType = 2; // 2: 플레이어
+            collisionData->entityBType = 1; // 1: 적
+            collisionData->impact = 1.0f; // 플레이어-적 충돌은 치명적
+            PublishEvent(EVENT_COLLISION_PLAYER_ENEMY, collisionData);
+            
+            // 기존 처리 로직은 이벤트 핸들러로 이동할 예정이므로 주석 처리
+            // DamagePlayer(&game->player);
+            // if (game->player.health <= 0) {
+            //     game->gameState = GAME_STATE_OVER;
+            //     break;
+            // }
         }
+    }
     // 폭발 파티클 업데이트
-        UpdateAllExplosionParticles(game);
+    UpdateAllExplosionParticles(game);
     }
 }
 

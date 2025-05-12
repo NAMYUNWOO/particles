@@ -35,10 +35,16 @@ int main(void)
         // 프레임 시작 이벤트 발행
         PublishEvent(EVENT_FRAME_START, NULL);
         
-        UpdateGame(&game);
+        // 키보드 입력 이벤트 처리 (이벤트 발행)
+        if (game.useEventSystem) {
+            ProcessInputEvents();
+        }
         
-        // 이벤트 큐 처리
+        // 이벤트 큐 처리 - 게임 업데이트 전에 처리하여 입력 이벤트가 즉시 반영되도록 함
         ProcessEventQueue();
+        
+        // 게임 업데이트
+        UpdateGame(&game);
         
         DrawGame(game);
         
