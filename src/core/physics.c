@@ -17,10 +17,23 @@ void ProcessEnemyCollisions(Game* game) {
         float prevHealth = game->enemies[e].health;
         for (int p = 0; p < PARTICLE_COUNT; p++) {
             if (CheckCollisionEnemyParticle(game->enemies[e], game->particles[p])) {
-                game->enemies[e].health -= PARTICLE_ENEMY_DAMAGE;
+                // 충돌 감지 시 파티클-적 충돌 이벤트 발행
+                CollisionEventData* collisionData = malloc(sizeof(CollisionEventData));
+                collisionData->entityAIndex = p;
+                collisionData->entityBIndex = e;
+                collisionData->entityAPtr = &game->particles[p];
+                collisionData->entityBPtr = &game->enemies[e];
+                collisionData->entityAType = 0; // 0: 파티클
+                collisionData->entityBType = 1; // 1: 적
+                collisionData->impact = PARTICLE_ENEMY_DAMAGE; // 충돌 강도
+                PublishEvent(EVENT_COLLISION_PARTICLE_ENEMY, collisionData);
+                
+                // 기존 처리 로직은 이벤트 핸들러로 이동할 예정이므로 주석 처리
+                // game->enemies[e].health -= PARTICLE_ENEMY_DAMAGE;
             }
         }
-        // 체력 변화 이벤트 발행
+        
+        // 체력 변화 이벤트 발행 (기존 코드 유지)
         if (game->enemies[e].health != prevHealth) {
             EnemyHealthEventData* data = malloc(sizeof(EnemyHealthEventData));
             data->enemyIndex = e;
@@ -29,6 +42,7 @@ void ProcessEnemyCollisions(Game* game) {
             data->enemyPtr = &game->enemies[e];
             PublishEvent(EVENT_ENEMY_HEALTH_CHANGED, data);
         }
+        
         if (game->enemies[e].health <= 0.0f) {
             // 폭발 파티클 생성
             SpawnExplosion(game->explosionParticles, &game->explosionParticleCount, 

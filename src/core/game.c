@@ -179,11 +179,23 @@ void UpdateGame(Game* game) {
             // Ignore collision for first 0.5s after enemy spawn
             if (GetTime() - game->enemies[i].spawnTime < 0.5f) continue;
             if (CheckCollisionCircles((Vector2){px, py}, game->player.size/2, game->enemies[i].position, game->enemies[i].radius)) {
-                DamagePlayer(&game->player);
-                if (game->player.health <= 0) {
-                    game->gameState = GAME_STATE_OVER;
-                    break;
-    }
+                // 플레이어-적 충돌 이벤트 발행
+                CollisionEventData* collisionData = malloc(sizeof(CollisionEventData));
+                collisionData->entityAIndex = 0; // 플레이어는 단일 엔티티이므로 인덱스는 0
+                collisionData->entityBIndex = i;
+                collisionData->entityAPtr = &game->player;
+                collisionData->entityBPtr = &game->enemies[i];
+                collisionData->entityAType = 2; // 2: 플레이어
+                collisionData->entityBType = 1; // 1: 적
+                collisionData->impact = 1.0f; // 플레이어-적 충돌은 치명적
+                PublishEvent(EVENT_COLLISION_PLAYER_ENEMY, collisionData);
+                
+                // 기존 처리 로직은 이벤트 핸들러로 이동할 예정이므로 주석 처리
+                // DamagePlayer(&game->player);
+                // if (game->player.health <= 0) {
+                //     game->gameState = GAME_STATE_OVER;
+                //     break;
+                // }
             }
         }
     // 폭발 파티클 업데이트
@@ -326,6 +338,51 @@ void AddScoreToScoreboard(Game* game) {
     }
     game->scoreboard[pos] = newEntry;
     SaveScoreboard(game, SCOREBOARD_FILENAME);
+}
+
+// 충돌 이벤트 핸들러
+static void OnParticleEnemyCollision(const Event* event, void* context) {
+    Game* game = (Game*)context;
+    CollisionEventData* data = (CollisionEventData*)event->data;
+    
+    Enemy* enemy = (Enemy*)data->entityBPtr;
+    // 파티클-적 충돌 처리
+    enemy->health -= data->impact;
+    
+    // printf("[이벤트] 파티클-적 충돌: particle=%d, enemy=%d, impact=%.3f\n", 
+    //       data->entityAIndex, data->entityBIndex, data->impact);
+    
+    free(data);
+}
+
+static void OnPlayerEnemyCollision(const Event* event, void* context) {
+    Game* game = (Game*)context;
+    CollisionEventData* data = (CollisionEventData*)event->data;
+    
+    Player* player = (Player*)data->entityAPtr;
+    // 플레이어-적 충돌 처리
+    DamagePlayer(player);
+    if (player->health <= 0) {
+        game->gameState = GAME_STATE_OVER;
+    }
+    
+    // printf("[이벤트] 플레이어-적 충돌: playerHealth=%d\n", player->health);
+    
+    free(data);
+}
+
+static void OnParticleParticleCollision(const Event* event, void* context) {
+    CollisionEventData* data = (CollisionEventData*)event->data;
+    // 파티클-파티클 충돌 처리 (필요한 경우)
+    // printf("[이벤트] 파티클-파티클 충돌: particleA=%d, particleB=%d\n", 
+    //       data->entityAIndex, data->entityBIndex);
+    free(data);
+}
+
+void RegisterCollisionEventHandlers(Game* game) {
+    SubscribeToEvent(EVENT_COLLISION_PARTICLE_ENEMY, OnParticleEnemyCollision, game);
+    SubscribeToEvent(EVENT_COLLISION_PLAYER_ENEMY, OnPlayerEnemyCollision, game);
+    SubscribeToEvent(EVENT_COLLISION_PARTICLE_PARTICLE, OnParticleParticleCollision, game);
 }
 
 // 적 이벤트 샘플 핸들러

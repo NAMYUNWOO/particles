@@ -7,6 +7,7 @@
 #include "../entities/explosion.h"
 #include "../entities/managers/enemy_manager.h"
 #include "../entities/managers/particle_manager.h"
+#include "event/event_system.h"
 
 // Constants
 #define PARTICLE_COUNT 100000  // Maximum number of particles
@@ -76,6 +77,10 @@ void UpdateAllParticles(Game* game, bool isSpacePressed);
 void UpdateAllExplosionParticles(Game* game);
 bool CheckCollisionEnemyParticle(Enemy enemy, Particle particle);
 void ProcessEnemyCollisions(Game* game);
+
+// 이벤트 핸들러 등록 함수
+void RegisterEnemyEventHandlers(void);
+void RegisterCollisionEventHandlers(Game* game);
 
 // Scoreboard functions
 typedef enum { SCOREBOARD_OK, SCOREBOARD_FILE_ERROR } ScoreboardResult;

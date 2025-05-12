@@ -17,13 +17,16 @@ int main(void)
 
     // 이벤트 시스템 초기화
     InitEventSystem();
-    // 적 이벤트 샘플 핸들러 등록
-    RegisterEnemyEventHandlers();
-
+    
     Game game = InitGame(screenWidth, screenHeight);
     
-    // 이벤트 시스템 사용 시 입력 핸들러 초기화
+    // 이벤트 시스템 사용 시 입력 핸들러와 충돌 핸들러 등록
     if (game.useEventSystem) {
+        // 적 이벤트 샘플 핸들러 등록
+        RegisterEnemyEventHandlers();
+        // 충돌 이벤트 핸들러 등록
+        RegisterCollisionEventHandlers(&game);
+        // 입력 핸들러 초기화
         InitInputHandler(&game);
     }
 
