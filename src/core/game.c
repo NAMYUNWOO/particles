@@ -117,7 +117,7 @@ void SwapPlayerWithParticle(Game* game, int particleIndex) {
     // 파티클 속도 초기화
     game->particles[particleIndex].velocity = (Vector2){0, 0};
 }
-
+// game.c 파일에서 UpdateGame 함수 내 수정
 void UpdateGame(Game* game) {
     game->deltaTime = GetFrameTime();
     
@@ -128,10 +128,32 @@ void UpdateGame(Game* game) {
     
     if (game->gameState == GAME_STATE_TUTORIAL) {
         if (IsKeyPressed(KEY_ENTER)) {
+            // 여기에 새로운 코드 추가: TUTORIAL → PLAYING 전환 시 게임 리소스 리셋
+            game->player = InitPlayer(game->screenWidth, game->screenHeight);
+            game->score = 0;
+            game->enemyCount = 0;
+            game->explosionParticleCount = 0;
+            game->lastEnemySpawnTime = GetTime();
+            
+            // 파티클 재초기화
+            for (int i = 0; i < PARTICLE_COUNT; i++) {
+                game->particles[i] = InitParticle(game->screenWidth, game->screenHeight);
+            }
+            
+            // 상태 변경
             game->gameState = GAME_STATE_PLAYING;
+            
+            // 선택적: 상태 변경 이벤트 발행
+            if (game->useEventSystem) {
+                GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
+                stateData->oldState = GAME_STATE_TUTORIAL;
+                stateData->newState = GAME_STATE_PLAYING;
+                PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
+            }
         }
         return;
     }
+    
     if (game->gameState == GAME_STATE_OVER) {
         // Enter name state on any key
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
@@ -147,6 +169,7 @@ void UpdateGame(Game* game) {
         }
         return;
     }
+    
     if (game->gameState == GAME_STATE_SCORE_ENTRY) {
         int key = GetCharPressed();
         while (key > 0) {
@@ -161,7 +184,9 @@ void UpdateGame(Game* game) {
             game->playerName[game->nameLength] = '\0';
         }
         if (IsKeyPressed(KEY_ENTER) && game->nameLength > 0) {
-            // AddScoreToScoreboard(game);
+            // 기존 코드 주석 처리
+            /*
+            AddScoreToScoreboard(game);
             
             // 게임 상태 변경 이벤트 발행
             GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
@@ -171,9 +196,25 @@ void UpdateGame(Game* game) {
             
             game->gameState = GAME_STATE_PLAYING;
             *game = InitGame(game->screenWidth, game->screenHeight); // Restart game
+            */
+            
+            // 새로운 코드: 점수 저장 후 단순히 상태만 변경
+            // AddScoreToScoreboard(game);
+            
+            // 단순히 상태만 TUTORIAL로 변경 (리소스 리셋은 TUTORIAL → PLAYING 전환 시 수행)
+            game->gameState = GAME_STATE_TUTORIAL;
+            
+            // 선택적: 상태 변경 이벤트 발행
+            if (game->useEventSystem) {
+                GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
+                stateData->oldState = GAME_STATE_SCORE_ENTRY;
+                stateData->newState = GAME_STATE_TUTORIAL;
+                PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
+            }
         }
         return;
     }
+    
     if (game->gameState == GAME_STATE_PLAYING) {
         // 이벤트 시스템을 사용하지 않을 경우에만 직접 입력 처리
         if (!game->useEventSystem) {
