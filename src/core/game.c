@@ -184,22 +184,8 @@ void UpdateGame(Game* game) {
             game->playerName[game->nameLength] = '\0';
         }
         if (IsKeyPressed(KEY_ENTER) && game->nameLength > 0) {
-            // 기존 코드 주석 처리
-            /*
-            AddScoreToScoreboard(game);
-            
-            // 게임 상태 변경 이벤트 발행
-            GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
-            stateData->oldState = GAME_STATE_SCORE_ENTRY;
-            stateData->newState = GAME_STATE_PLAYING;
-            PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
-            
-            game->gameState = GAME_STATE_PLAYING;
-            *game = InitGame(game->screenWidth, game->screenHeight); // Restart game
-            */
-            
             // 새로운 코드: 점수 저장 후 단순히 상태만 변경
-            // AddScoreToScoreboard(game);
+            AddScoreToScoreboard(game);
             
             // 단순히 상태만 TUTORIAL로 변경 (리소스 리셋은 TUTORIAL → PLAYING 전환 시 수행)
             game->gameState = GAME_STATE_TUTORIAL;
@@ -375,13 +361,29 @@ void CleanupGame(Game* game) {
 }
 
 ScoreboardResult LoadScoreboard(Game* game, const char* filename) {
+    if (!game) return SCOREBOARD_FILE_ERROR;
+    
+    // 스코어보드 초기화
+    game->scoreboardCount = 0;
+    memset(game->scoreboard, 0, sizeof(ScoreEntry) * MAX_SCOREBOARD_ENTRIES);
+    
     FILE* f = fopen(filename, "r");
     if (!f) return SCOREBOARD_FILE_ERROR;
-    game->scoreboardCount = 0;
-    while (fscanf(f, "%15s %d", game->scoreboard[game->scoreboardCount].name, &game->scoreboard[game->scoreboardCount].score) == 2) {
+    
+    char name[MAX_NAME_LENGTH];
+    int score;
+    
+    while (game->scoreboardCount < MAX_SCOREBOARD_ENTRIES) {
+        if (fscanf(f, "%15s %d", name, &score) != 2) break;
+        
+        // 안전하게 복사
+        strncpy(game->scoreboard[game->scoreboardCount].name, name, MAX_NAME_LENGTH-1);
+        game->scoreboard[game->scoreboardCount].name[MAX_NAME_LENGTH-1] = '\0';
+        game->scoreboard[game->scoreboardCount].score = score;
+        
         game->scoreboardCount++;
-        if (game->scoreboardCount >= MAX_SCOREBOARD_ENTRIES) break;
     }
+    
     fclose(f);
     return SCOREBOARD_OK;
 }
@@ -397,13 +399,19 @@ ScoreboardResult SaveScoreboard(Game* game, const char* filename) {
 }
 
 void AddScoreToScoreboard(Game* game) {
-    // Add new entry
-    if (game->nameLength == 0) return;
+    // NULL 체크 및 조기 반환
+    if (!game || game->nameLength == 0) return;
+    
+    // 새 항목 초기화
     ScoreEntry newEntry;
-    strncpy(newEntry.name, game->playerName, MAX_NAME_LENGTH);
-    newEntry.name[MAX_NAME_LENGTH-1] = '\0';
+    memset(&newEntry, 0, sizeof(ScoreEntry)); // 명시적 초기화
+    
+    // 이름 복사 (안전하게)
+    strncpy(newEntry.name, game->playerName, MAX_NAME_LENGTH - 1);
+    newEntry.name[MAX_NAME_LENGTH - 1] = '\0'; // NULL 종료 보장
     newEntry.score = game->score;
-    // Insert in sorted order (descending)
+    
+    // 삽입 위치 찾기 (내림차순)
     int pos = game->scoreboardCount;
     for (int i = 0; i < game->scoreboardCount; i++) {
         if (newEntry.score > game->scoreboard[i].score) {
@@ -411,11 +419,33 @@ void AddScoreToScoreboard(Game* game) {
             break;
         }
     }
-    if (game->scoreboardCount < MAX_SCOREBOARD_ENTRIES) game->scoreboardCount++;
-    for (int i = game->scoreboardCount-1; i > pos; i--) {
-        game->scoreboard[i] = game->scoreboard[i-1];
+    
+    // 배열 크기 증가 (경계 검사)
+    if (game->scoreboardCount < MAX_SCOREBOARD_ENTRIES) {
+        // 공간 확보를 위해 항목 이동 (안전한 경계 확인 추가)
+        for (int i = game->scoreboardCount; i > pos; i--) {
+            if (i < MAX_SCOREBOARD_ENTRIES && i-1 >= 0) {
+                game->scoreboard[i] = game->scoreboard[i-1];
+            }
+        }
+        // 크기 증가는 이동 후에
+        game->scoreboardCount++;
+    } else if (pos < MAX_SCOREBOARD_ENTRIES - 1) {
+        // 이미 최대 크기인 경우, 마지막 항목 버리고 이동
+        for (int i = MAX_SCOREBOARD_ENTRIES - 1; i > pos; i--) {
+            game->scoreboard[i] = game->scoreboard[i-1];
+        }
+    } else {
+        // 최대 크기이고 삽입 위치가 범위 밖이면 무시
+        return;
     }
-    game->scoreboard[pos] = newEntry;
+    
+    // 새 항목 삽입 (경계 검사)
+    if (pos >= 0 && pos < MAX_SCOREBOARD_ENTRIES) {
+        game->scoreboard[pos] = newEntry;
+    }
+    
+    // 변경사항 저장
     SaveScoreboard(game, SCOREBOARD_FILENAME);
 }
 
