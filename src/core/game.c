@@ -41,7 +41,7 @@ Game InitGame(int screenWidth, int screenHeight) {
         .enemyCount = 0,
         .explosionParticleCount = 0,
         .score = 0,
-        .gameState = GAME_STATE_PLAYING,
+        .gameState = GAME_STATE_TUTORIAL,
         .playerName[0] = '\0',
         .nameLength = 0,
         .scoreboardCount = 0,
@@ -126,6 +126,12 @@ void UpdateGame(Game* game) {
     //     ProcessInputEvents();
     // }
     
+    if (game->gameState == GAME_STATE_TUTORIAL) {
+        if (IsKeyPressed(KEY_ENTER)) {
+            game->gameState = GAME_STATE_PLAYING;
+        }
+        return;
+    }
     if (game->gameState == GAME_STATE_OVER) {
         // Enter name state on any key
         if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_SPACE)) {
@@ -220,81 +226,91 @@ void UpdateGame(Game* game) {
 
 void DrawGame(Game game) {
     BeginDrawing();
-        ClearBackground(RAYWHITE);
-        
-        // 모든 파티클 그리기
-        for (int i = 0; i < PARTICLE_COUNT; i++) {
-            DrawParticlePixel(game.particles[i]);
+    ClearBackground(RAYWHITE);
+
+    if (game.gameState == GAME_STATE_TUTORIAL) {
+        DrawText("How to Play", 320, 200, 32, DARKBLUE);
+        DrawText("Move: Arrow keys", 260, 260, 24, BLACK);
+        DrawText("Attract particles: SPACE", 260, 300, 24, BLACK);
+        DrawText("Speed boost: Shift", 260, 340, 24, BLACK);
+        DrawText("Press Enter to Start", 260, 380, 24, RED);
+        EndDrawing();
+        return;
+    }
+
+    // 모든 파티클 그리기
+    for (int i = 0; i < PARTICLE_COUNT; i++) {
+        DrawParticlePixel(game.particles[i]);
+    }
+    
+    // 폭발 파티클 그리기
+    for (int i = 0; i < game.explosionParticleCount; i++) {
+        DrawExplosionParticle(game.explosionParticles[i]);
+    }
+    
+    // Draw all enemies
+    for (int i = 0; i < game.enemyCount; i++) {
+        DrawEnemy(game.enemies[i]);
+    }
+    
+    // 점수 표시
+    char scoreText[32];
+    sprintf(scoreText, "Score: %d", game.score);
+    DrawText(scoreText, 10, 10, 20, BLACK);
+    // 부스트 게이지 표시 (우상단)
+    int barW = 120, barH = 12;
+    int barX = game.screenWidth - barW - 10;
+    int barY = 10;
+    DrawRectangle(barX-2, barY-2, barW+4, barH+4, GRAY); // border
+    int boostW = (int)(barW * (game.player.boostGauge/BOOST_GAUGE_MAX));
+    DrawRectangle(barX, barY, boostW, barH, SKYBLUE);
+    DrawRectangleLines(barX-2, barY-2, barW+4, barH+4, DARKBLUE);
+    // UX: If boostGauge <= 50, gray out right half and show lock
+    if (game.player.boostGauge <= 50.0f) {
+        DrawRectangle(barX + barW/2, barY, barW/2, barH, (Color){180,180,180,180});
+        DrawText("BOOST LOCKED", barX + barW/2 - 8, barY - 18, 14, DARKGRAY);
+    }
+    // 체력(하트) 표시
+    for (int i = 0; i < game.player.health; i++) {
+        DrawRectangle(10 + i * 30, 40, 20, 20, RED);
+    }
+    
+    // 플레이어 그리기 (무적 시 깜빡임)
+    if (!game.player.isInvincible || ((int)(GetTime() * 10) % 2 == 0)) {
+        DrawRectangle(game.player.position.x, game.player.position.y, game.player.size, game.player.size, RED);
+    }
+    
+    // FPS 표시
+    DrawFPS(10, 70);
+    
+    // 게임 오버 화면
+    if (game.gameState == GAME_STATE_OVER) {
+        int sw = game.screenWidth;
+        int sh = game.screenHeight;
+        DrawText("GAME OVER", sw/2 - 100, sh/2 - 90, 40, RED);
+        char scoreText[64];
+        sprintf(scoreText, "Final Score: %d", game.score);
+        DrawText(scoreText, sw/2 - 100, sh/2 - 40, 30, BLACK);
+        DrawText("Press Enter to register your score!", sw/2 - 180, sh/2 + 10, 20, DARKGRAY);
+    }
+    if (game.gameState == GAME_STATE_SCORE_ENTRY) {
+        int sw = game.screenWidth;
+        int sh = game.screenHeight;
+        DrawText("Enter your name:", sw/2 - 120, sh/2 - 60, 30, BLACK);
+        DrawRectangle(sw/2 - 120, sh/2 - 20, 300, 40, LIGHTGRAY);
+        DrawText(game.playerName, sw/2 - 110, sh/2 - 10, 30, MAROON);
+        if ((int)(GetTime()*2)%2 == 0 && game.nameLength < MAX_NAME_LENGTH-1) {
+            DrawText("_", sw/2 - 110 + MeasureText(game.playerName, 30), sh/2 - 10, 30, MAROON);
         }
-        
-        // 폭발 파티클 그리기
-        for (int i = 0; i < game.explosionParticleCount; i++) {
-            DrawExplosionParticle(game.explosionParticles[i]);
+        DrawText("Press Enter to save", sw/2 - 120, sh/2 + 30, 20, DARKGRAY);
+        // Scoreboard display
+        DrawText("SCOREBOARD", sw/2 - 100, sh/2 + 70, 28, BLUE);
+        for (int i = 0; i < game.scoreboardCount; i++) {
+            char entry[64];
+            sprintf(entry, "%2d. %-15s %6d", i+1, game.scoreboard[i].name, game.scoreboard[i].score);
+            DrawText(entry, sw/2 - 100, sh/2 + 100 + i*28, 24, (i==0)?GOLD:BLACK);
         }
-        
-        // Draw all enemies
-        for (int i = 0; i < game.enemyCount; i++) {
-            DrawEnemy(game.enemies[i]);
-        }
-        
-        // 점수 표시
-        char scoreText[32];
-        sprintf(scoreText, "Score: %d", game.score);
-        DrawText(scoreText, 10, 10, 20, BLACK);
-        // 부스트 게이지 표시 (우상단)
-        int barW = 120, barH = 12;
-        int barX = game.screenWidth - barW - 10;
-        int barY = 10;
-        DrawRectangle(barX-2, barY-2, barW+4, barH+4, GRAY); // border
-        int boostW = (int)(barW * (game.player.boostGauge/BOOST_GAUGE_MAX));
-        DrawRectangle(barX, barY, boostW, barH, SKYBLUE);
-        DrawRectangleLines(barX-2, barY-2, barW+4, barH+4, DARKBLUE);
-        // UX: If boostGauge <= 50, gray out right half and show lock
-        if (game.player.boostGauge <= 50.0f) {
-            DrawRectangle(barX + barW/2, barY, barW/2, barH, (Color){180,180,180,180});
-            DrawText("BOOST LOCKED", barX + barW/2 - 8, barY - 18, 14, DARKGRAY);
-        }
-        // 체력(하트) 표시
-        for (int i = 0; i < game.player.health; i++) {
-            DrawRectangle(10 + i * 30, 40, 20, 20, RED);
-        }
-        
-        // 플레이어 그리기 (무적 시 깜빡임)
-        if (!game.player.isInvincible || ((int)(GetTime() * 10) % 2 == 0)) {
-            DrawRectangle(game.player.position.x, game.player.position.y, game.player.size, game.player.size, RED);
-        }
-        
-        // FPS 표시
-        DrawFPS(10, 70);
-        
-        // 게임 오버 화면
-        if (game.gameState == GAME_STATE_OVER) {
-            int sw = game.screenWidth;
-            int sh = game.screenHeight;
-            DrawText("GAME OVER", sw/2 - 100, sh/2 - 90, 40, RED);
-            char scoreText[64];
-            sprintf(scoreText, "Final Score: %d", game.score);
-            DrawText(scoreText, sw/2 - 100, sh/2 - 40, 30, BLACK);
-            DrawText("Press Enter to register your score!", sw/2 - 180, sh/2 + 10, 20, DARKGRAY);
-        }
-        if (game.gameState == GAME_STATE_SCORE_ENTRY) {
-            int sw = game.screenWidth;
-            int sh = game.screenHeight;
-            DrawText("Enter your name:", sw/2 - 120, sh/2 - 60, 30, BLACK);
-            DrawRectangle(sw/2 - 120, sh/2 - 20, 300, 40, LIGHTGRAY);
-            DrawText(game.playerName, sw/2 - 110, sh/2 - 10, 30, MAROON);
-            if ((int)(GetTime()*2)%2 == 0 && game.nameLength < MAX_NAME_LENGTH-1) {
-                DrawText("_", sw/2 - 110 + MeasureText(game.playerName, 30), sh/2 - 10, 30, MAROON);
-            }
-            DrawText("Press Enter to save", sw/2 - 120, sh/2 + 30, 20, DARKGRAY);
-            // Scoreboard display
-            DrawText("SCOREBOARD", sw/2 - 100, sh/2 + 70, 28, BLUE);
-            for (int i = 0; i < game.scoreboardCount; i++) {
-                char entry[64];
-                sprintf(entry, "%2d. %-15s %6d", i+1, game.scoreboard[i].name, game.scoreboard[i].score);
-                DrawText(entry, sw/2 - 100, sh/2 + 100 + i*28, 24, (i==0)?GOLD:BLACK);
-            }
-        }
+    }
     EndDrawing();
 }
 

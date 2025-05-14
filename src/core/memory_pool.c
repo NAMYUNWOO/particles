@@ -43,7 +43,7 @@ void MemoryPool_Free(MemoryPool* pool, void* ptr) {
     char* blockStart = (char*)pool->blocks;
     char* blockEnd = blockStart + (pool->capacity * pool->blockSize);
     
-    if (ptr >= blockStart && ptr < blockEnd && pool->freeCount < pool->capacity) {
+    if ((char*)ptr >= blockStart && (char*)ptr < blockEnd && pool->freeCount < pool->capacity) {
         // 블록을 사용 가능한 목록에 추가
         pool->freeList[pool->freeCount++] = ptr;
     }

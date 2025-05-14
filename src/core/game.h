@@ -18,6 +18,7 @@
 
 // Game state enum
 typedef enum {
+    GAME_STATE_TUTORIAL,   // 설명/조작법 화면
     GAME_STATE_PLAYING,
     GAME_STATE_OVER,
     GAME_STATE_SCORE_ENTRY
