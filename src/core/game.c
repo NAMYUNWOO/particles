@@ -161,7 +161,7 @@ void UpdateGame(Game* game) {
             game->playerName[game->nameLength] = '\0';
         }
         if (IsKeyPressed(KEY_ENTER) && game->nameLength > 0) {
-            AddScoreToScoreboard(game);
+            // AddScoreToScoreboard(game);
             
             // 게임 상태 변경 이벤트 발행
             GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
