@@ -2,6 +2,7 @@
 #include "core/game.h"
 #include "core/event/event_system.h"
 #include "core/input_handler.h"
+#include "entities/managers/stage_manager.h"
 #include <stdlib.h>
 
 // RegisterEnemyEventHandlers 함수 선언
@@ -12,11 +13,14 @@ int main(void)
     const int screenWidth = 800;
     const int screenHeight = 800;
 
-    InitWindow(screenWidth, screenHeight, "Particle Simulation");
+    InitWindow(screenWidth, screenHeight, "Particle Storm - 10 Stages");
     SetTargetFPS(60);
 
     // 이벤트 시스템 초기화
     InitEventSystem();
+    
+    // 스테이지 매니저 초기화
+    InitStageManager();
     
     Game game = InitGame(screenWidth, screenHeight);
     
@@ -26,6 +30,8 @@ int main(void)
         RegisterEnemyEventHandlers();
         // 충돌 이벤트 핸들러 등록
         RegisterCollisionEventHandlers(&game);
+        // 스테이지 이벤트 핸들러 등록
+        RegisterStageEventHandlers(&game);
         // 입력 핸들러 초기화
         InitInputHandler(&game);
     }
@@ -46,7 +52,7 @@ int main(void)
         // 게임 업데이트
         UpdateGame(&game);
         
-        DrawGame(game);
+        DrawGame(&game);
         
         // 프레임 종료 이벤트 발행
         PublishEvent(EVENT_FRAME_END, NULL);

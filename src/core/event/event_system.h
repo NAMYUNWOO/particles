@@ -20,14 +20,36 @@ typedef enum {
     EVENT_ENEMY_DESTROYED,
     EVENT_ENEMY_HEALTH_CHANGED,
     EVENT_ENEMY_STATE_CHANGED,
+    EVENT_ENEMY_SPLIT,           // New: Enemy splitting
     
     // 충돌 이벤트
     EVENT_COLLISION_PARTICLE_ENEMY,
     EVENT_COLLISION_PLAYER_ENEMY,
     EVENT_COLLISION_PARTICLE_PARTICLE,
+    EVENT_COLLISION_CLUSTER_EXPLOSION, // New: Cluster enemy explosion
     
     // 게임 상태 이벤트
     EVENT_GAME_STATE_CHANGED,
+    
+    // 스테이지 관련 이벤트
+    EVENT_STAGE_STARTED,         // New: Stage started
+    EVENT_STAGE_COMPLETED,       // New: Stage completed
+    EVENT_STAGE_WAVE_STARTED,    // New: Wave started
+    EVENT_STAGE_WAVE_COMPLETED,  // New: Wave completed
+    EVENT_STAGE_BOSS_WARNING,    // New: Boss warning
+    
+    // 특수 능력 이벤트
+    EVENT_ENEMY_TELEPORTED,      // New: Enemy teleported
+    EVENT_REPULSION_FIELD,       // New: Repulsion field activated
+    EVENT_BOSS_PHASE_CHANGED,    // New: Boss phase changed
+    
+    // 시각 효과 이벤트
+    EVENT_PARTICLE_EFFECT,       // New: Particle effect spawned
+    EVENT_SCREEN_SHAKE,          // New: Screen shake effect
+    
+    // 점수 및 통계 이벤트
+    EVENT_SCORE_CHANGED,         // New: Score changed
+    EVENT_MILESTONE_REACHED,     // New: Achievement/milestone
     
     // 향후 추가 이벤트를 위한 자리
     

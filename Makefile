@@ -24,7 +24,8 @@ SRC_FILES := \
 	$(ENTITIES_DIR)/enemy.c \
 	$(ENTITIES_DIR)/explosion.c \
 	$(MANAGERS_DIR)/enemy_manager.c \
-	$(MANAGERS_DIR)/particle_manager.c
+	$(MANAGERS_DIR)/particle_manager.c \
+	$(MANAGERS_DIR)/stage_manager.c
 OBJ_FILES := $(SRC_FILES:.c=.o)
 
 # Platform detection: Windows_NT for Windows, otherwise assume macOS
@@ -34,7 +35,7 @@ ifeq ($(OS),Windows_NT)
 RAYLIB_PATH    := C:/Users/namyunwoo/W64Devkit/w64devkit
 INCLUDE_PATHS  := -I"$(RAYLIB_PATH)/include" -I./src
 LDFLAGS        := -L"$(RAYLIB_PATH)/lib"
-LDLIBS         := -lraylib -lopengl32 -lgdi32 -lwinmm
+LDLIBS         := -lraylib -lopengl32 -lgdi32 -lwinmm -lm
 
 else
 
@@ -46,7 +47,8 @@ LDLIBS         := -lraylib \
                    -framework OpenGL \
                    -framework Cocoa \
                    -framework IOKit \
-                   -framework CoreVideo
+                   -framework CoreVideo \
+                   -lm
 
 endif
 

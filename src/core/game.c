@@ -6,9 +6,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "raymath.h"
 #include "event/event_system.h"
 #include "event/event_types.h"
 #include "memory_pool.h"
+#include "../entities/managers/stage_manager.h"
 
 #define SCOREBOARD_FILENAME "scoreboard.txt"
 
@@ -45,7 +47,12 @@ Game InitGame(int screenWidth, int screenHeight) {
         .playerName[0] = '\0',
         .nameLength = 0,
         .scoreboardCount = 0,
-        .useEventSystem = true  // 이벤트 시스템 사용 설정
+        .useEventSystem = true,  // 이벤트 시스템 사용 설정
+        .currentStageNumber = 0,  // Start with no stage
+        .stageTimer = 0.0f,
+        .stageTransition = false,
+        .totalEnemiesKilled = 0,
+        .enemiesKilledThisStage = 0
     };
 
     // 파티클 배열 동적 할당
@@ -58,7 +65,7 @@ Game InitGame(int screenWidth, int screenHeight) {
 
     // 적(enemy) 배열 동적 할당
     game.enemies = (Enemy*)malloc(MAX_ENEMIES * sizeof(Enemy));
-
+    
     LoadScoreboard(&game, SCOREBOARD_FILENAME);
 
     return game;
@@ -134,22 +141,69 @@ void UpdateGame(Game* game) {
             game->enemyCount = 0;
             game->explosionParticleCount = 0;
             game->lastEnemySpawnTime = GetTime();
+            game->totalEnemiesKilled = 0;
+            game->enemiesKilledThisStage = 0;
             
             // 파티클 재초기화
             for (int i = 0; i < PARTICLE_COUNT; i++) {
                 game->particles[i] = InitParticle(game->screenWidth, game->screenHeight);
             }
             
-            // 상태 변경
-            game->gameState = GAME_STATE_PLAYING;
+            // Load first stage
+            LoadStage(game, 1);
+            
+            // 게임 상태 직접 설정 (LoadStage에서도 설정하지만 명시적으로)
+            game->gameState = GAME_STATE_STAGE_INTRO;
             
             // 선택적: 상태 변경 이벤트 발행
             if (game->useEventSystem) {
                 GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
                 stateData->oldState = GAME_STATE_TUTORIAL;
-                stateData->newState = GAME_STATE_PLAYING;
+                stateData->newState = GAME_STATE_STAGE_INTRO;
                 PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
             }
+        }
+        return;
+    }
+    
+    if (game->gameState == GAME_STATE_STAGE_INTRO) {
+        // Debug output
+        printf("STAGE_INTRO: state=%d, stateTimer=%.1f\n", game->currentStage.state, game->currentStage.stateTimer);
+        
+        // Phase 1: Stage introduction (3 seconds)
+        if (game->currentStage.state == STAGE_STATE_INTRO && game->currentStage.stateTimer > 3.0f) {
+            printf("Transitioning from INTRO to COUNTDOWN\n");
+            game->currentStage.state = STAGE_STATE_COUNTDOWN;
+            game->currentStage.stateTimer = 0.0f; // Reset timer for countdown phase
+        }
+        // Phase 2: Countdown (3 seconds) 
+        else if (game->currentStage.state == STAGE_STATE_COUNTDOWN && game->currentStage.stateTimer > 3.0f) {
+            printf("Transitioning from COUNTDOWN to PLAYING\n");
+            game->gameState = GAME_STATE_PLAYING;
+            game->currentStage.state = STAGE_STATE_ACTIVE;
+        }
+        // Boss warning handling
+        else if (game->currentStage.state == STAGE_STATE_BOSS_WARNING && game->currentStage.stateTimer > 2.0f) {
+            printf("Transitioning from BOSS_WARNING to COUNTDOWN\n");
+            game->currentStage.state = STAGE_STATE_COUNTDOWN;
+            game->currentStage.stateTimer = 0.0f; // Reset timer for countdown phase
+        }
+        
+        // Update stage timer manually instead of calling UpdateStage to avoid conflicts
+        game->currentStage.stateTimer += game->deltaTime;
+        return;
+    }
+    
+    if (game->gameState == GAME_STATE_STAGE_COMPLETE) {
+        if (IsKeyPressed(KEY_ENTER)) {
+            TransitionToNextStage(game);
+        }
+        return;
+    }
+    
+    if (game->gameState == GAME_STATE_VICTORY) {
+        if (IsKeyPressed(KEY_ENTER)) {
+            game->gameState = GAME_STATE_SCORE_ENTRY;
         }
         return;
     }
@@ -202,6 +256,9 @@ void UpdateGame(Game* game) {
     }
     
     if (game->gameState == GAME_STATE_PLAYING) {
+        // Update stage system
+        UpdateStageSystem(game);
+        
         // 이벤트 시스템을 사용하지 않을 경우에만 직접 입력 처리
         if (!game->useEventSystem) {
             // 직접 입력 방식에서만 키 상태 직접 설정
@@ -214,9 +271,33 @@ void UpdateGame(Game* game) {
         // 플레이어 업데이트 (방향키로 이동)
         UpdatePlayer(&game->player, game->screenWidth, game->screenHeight, game->moveSpeed, game->deltaTime);
         
-        // Enemy spawn and update
-        SpawnEnemyIfNeeded(game);
-        UpdateAllEnemies(game);
+        // Update enemies with AI
+        for (int i = 0; i < game->enemyCount; i++) {
+            UpdateEnemyAI(&game->enemies[i], game->player.position, game->deltaTime);
+            UpdateEnemyMovement(&game->enemies[i], game->player.position, game->deltaTime);
+            UpdateEnemy(&game->enemies[i], game->screenWidth, game->screenHeight, game->deltaTime);
+            
+            // Apply repulsion fields
+            if (game->enemies[i].type == ENEMY_TYPE_REPULSOR) {
+                // Apply repulsion to nearby particles
+                for (int p = 0; p < PARTICLE_COUNT; p++) {
+                    float dist = Vector2Distance(game->particles[p].position, game->enemies[i].position);
+                    if (dist < REPULSE_RADIUS && dist > 1.0f) {
+                        Vector2 repulseDir = Vector2Subtract(game->particles[p].position, game->enemies[i].position);
+                        repulseDir = Vector2Normalize(repulseDir);
+                        float repulseForce = (1.0f - dist / REPULSE_RADIUS) * 2.0f;
+                        game->particles[p].velocity.x += repulseDir.x * repulseForce;
+                        game->particles[p].velocity.y += repulseDir.y * repulseForce;
+                    }
+                }
+            }
+        }
+        
+        // Legacy enemy spawn (only if not using stage system)
+        if (game->currentStageNumber == 0) {
+            SpawnEnemyIfNeeded(game);
+            UpdateAllEnemies(game);
+        }
         
         // 모든 파티클 업데이트 (이벤트 처리된 isBoosting 값 사용)
         UpdateAllParticles(game, game->player.isBoosting);
@@ -251,11 +332,16 @@ void UpdateGame(Game* game) {
     }
 }
 
-void DrawGame(Game game) {
+void DrawGame(Game* game) {
     BeginDrawing();
-    ClearBackground(RAYWHITE);
+    
+    if (game->gameState == GAME_STATE_PLAYING || game->gameState == GAME_STATE_STAGE_INTRO) {
+        ClearBackground(game->currentStage.backgroundColor);
+    } else {
+        ClearBackground(RAYWHITE);
+    }
 
-    if (game.gameState == GAME_STATE_TUTORIAL) {
+    if (game->gameState == GAME_STATE_TUTORIAL) {
         DrawText("How to Play", 320, 200, 32, DARKBLUE);
         DrawText("Move: Arrow keys", 260, 260, 24, BLACK);
         DrawText("Attract particles: SPACE", 260, 300, 24, BLACK);
@@ -264,77 +350,234 @@ void DrawGame(Game game) {
         EndDrawing();
         return;
     }
+    
+    // Draw stage-specific UI
+    if (game->gameState == GAME_STATE_STAGE_INTRO) {
+        if (game->currentStage.state == STAGE_STATE_INTRO) {
+            // Phase 1: Show stage introduction/description
+            DrawStageIntro(&game->currentStage, game->screenWidth, game->screenHeight);
+        } else if (game->currentStage.state == STAGE_STATE_COUNTDOWN) {
+            // Phase 2: White background with countdown
+            ClearBackground(RAYWHITE);
+            
+            float remainingTime = 3.0f - game->currentStage.stateTimer;
+            if (remainingTime > 0) {
+                int countdown = (int)ceilf(remainingTime);
+                char countdownText[32];
+                
+                // Determine countdown text and color
+                Color textColor = WHITE;
+                int fontSize = 120;
+                
+                if (countdown >= 1) {
+                    sprintf(countdownText, "%d", countdown);
+                    // Color based on countdown number
+                    switch(countdown) {
+                        case 3: textColor = RED; break;
+                        case 2: textColor = ORANGE; break;
+                        case 1: textColor = YELLOW; break;
+                        default: textColor = WHITE; break;
+                    }
+                } else {
+                    strcpy(countdownText, "START!");
+                    textColor = GREEN;
+                    fontSize = 80;
+                }
+                
+                // Add intense pulsing effect based on countdown urgency
+                float pulseSpeed = (countdown <= 1) ? 12.0f : 8.0f;
+                float pulseIntensity = (countdown <= 1) ? 0.4f : 0.2f;
+                float pulseScale = 1.0f + sinf(GetTime() * pulseSpeed) * pulseIntensity;
+                int adjustedFontSize = (int)(fontSize * pulseScale);
+                
+                // Center the text
+                int textWidth = MeasureText(countdownText, adjustedFontSize);
+                int textX = game->screenWidth / 2 - textWidth / 2;
+                int textY = game->screenHeight / 2 - adjustedFontSize / 2;
+                
+                // Add glowing background circle with color matching countdown
+                Color circleColor = Fade(textColor, 0.3f);
+                float circleRadius = 120 + sinf(GetTime() * pulseSpeed) * 20;
+                DrawCircle(game->screenWidth / 2, game->screenHeight / 2, circleRadius, circleColor);
+                
+                // Draw multiple shadow layers for glow effect
+                for (int i = 8; i >= 1; i--) {
+                    Color shadowColor = Fade(BLACK, 0.1f);
+                    DrawText(countdownText, textX + i, textY + i, adjustedFontSize, shadowColor);
+                }
+                
+                // Draw main text with outline
+                DrawText(countdownText, textX + 1, textY + 1, adjustedFontSize, BLACK);
+                DrawText(countdownText, textX, textY, adjustedFontSize, textColor);
+                
+                // Add screen flash effect for "1" and "START!"
+                if (countdown == 1 || strcmp(countdownText, "START!") == 0) {
+                    float flashAlpha = (sinf(GetTime() * 15.0f) + 1.0f) * 0.1f;
+                    DrawRectangle(0, 0, game->screenWidth, game->screenHeight, Fade(WHITE, flashAlpha));
+                }
+            }
+        } else if (game->currentStage.state == STAGE_STATE_BOSS_WARNING) {
+            // Boss warning screen
+            DrawBossWarning(game->screenWidth, game->screenHeight);
+            
+            // Boss warning countdown
+            float remainingTime = 2.0f - game->currentStage.stateTimer;
+            if (remainingTime > 0) {
+                int countdown = (int)ceilf(remainingTime);
+                char countdownText[32];
+                
+                if (countdown >= 1) {
+                    sprintf(countdownText, "BOSS IN %d", countdown);
+                } else {
+                    strcpy(countdownText, "BOSS FIGHT!");
+                }
+                
+                // Pulsing red warning
+                float pulseScale = 1.0f + sinf(GetTime() * 10.0f) * 0.3f;
+                int fontSize = (int)(60 * pulseScale);
+                Color textColor = Fade(RED, 0.8f + sinf(GetTime() * 15.0f) * 0.2f);
+                
+                int textWidth = MeasureText(countdownText, fontSize);
+                int textX = game->screenWidth / 2 - textWidth / 2;
+                int textY = game->screenHeight / 2 + 100;
+                
+                DrawText(countdownText, textX + 2, textY + 2, fontSize, BLACK);
+                DrawText(countdownText, textX, textY, fontSize, textColor);
+            }
+        }
+        EndDrawing();
+        return;
+    }
+    
+    if (game->gameState == GAME_STATE_STAGE_COMPLETE) {
+        DrawStageComplete(&game->currentStage, game->screenWidth, game->screenHeight);
+        EndDrawing();
+        return;
+    }
+    
+    if (game->gameState == GAME_STATE_VICTORY) {
+        DrawRectangle(0, 0, game->screenWidth, game->screenHeight, Fade(GOLD, 0.7f));
+        const char* victoryText = "VICTORY!";
+        int fontSize = 72;
+        int textWidth = MeasureText(victoryText, fontSize);
+        DrawText(victoryText, game->screenWidth/2 - textWidth/2, game->screenHeight/2 - 100, fontSize, WHITE);
+        
+        char scoreText[64];
+        sprintf(scoreText, "Final Score: %d", game->score);
+        fontSize = 36;
+        textWidth = MeasureText(scoreText, fontSize);
+        DrawText(scoreText, game->screenWidth/2 - textWidth/2, game->screenHeight/2, fontSize, WHITE);
+        
+        const char* continueText = "Press Enter to save your score";
+        fontSize = 24;
+        textWidth = MeasureText(continueText, fontSize);
+        DrawText(continueText, game->screenWidth/2 - textWidth/2, game->screenHeight/2 + 60, fontSize, WHITE);
+        EndDrawing();
+        return;
+    }
 
-    // 모든 파티클 그리기
-    for (int i = 0; i < PARTICLE_COUNT; i++) {
-        DrawParticlePixel(game.particles[i]);
+    // Only draw game objects during PLAYING state
+    if (game->gameState == GAME_STATE_PLAYING) {
+        // 모든 파티클 그리기
+        for (int i = 0; i < PARTICLE_COUNT; i++) {
+            DrawParticlePixel(game->particles[i]);
+        }
+        
+        // 폭발 파티클 그리기
+        for (int i = 0; i < game->explosionParticleCount; i++) {
+            DrawExplosionParticle(game->explosionParticles[i]);
+        }
+        
+        // Draw all enemies
+        for (int i = 0; i < game->enemyCount; i++) {
+            DrawEnemy(game->enemies[i]);
+        }
+        
+        // 점수 표시
+        char scoreText[32];
+        sprintf(scoreText, "Score: %d", game->score);
+        DrawText(scoreText, 10, 10, 20, BLACK);
+        
+        // Draw stage progress if in a stage
+        if (game->currentStageNumber > 0) {
+            DrawStageProgress(&game->currentStage, game->screenWidth);
+        }
+        // 부스트 게이지 표시 (우상단)
+        int barW = 120, barH = 12;
+        int barX = game->screenWidth - barW - 10;
+        int barY = 10;
+        DrawRectangle(barX-2, barY-2, barW+4, barH+4, GRAY); // border
+        int boostW = (int)(barW * (game->player.boostGauge/BOOST_GAUGE_MAX));
+        DrawRectangle(barX, barY, boostW, barH, SKYBLUE);
+        DrawRectangleLines(barX-2, barY-2, barW+4, barH+4, DARKBLUE);
+        // UX: If boostGauge <= 50, gray out right half and show lock
+        if (game->player.boostGauge <= 50.0f) {
+            DrawRectangle(barX + barW/2, barY, barW/2, barH, (Color){180,180,180,180});
+            DrawText("BOOST LOCKED", barX + barW/2 - 8, barY - 18, 14, DARKGRAY);
+        }
+        // 체력(하트) 표시
+        for (int i = 0; i < game->player.health; i++) {
+            DrawRectangle(10 + i * 30, 40, 20, 20, RED);
+        }
+        
+        // 플레이어 그리기 (무적 시 깜빡임)
+        if (!game->player.isInvincible || ((int)(GetTime() * 10) % 2 == 0)) {
+            DrawRectangle(game->player.position.x, game->player.position.y, game->player.size, game->player.size, RED);
+        }
+        
+        // FPS 표시
+        DrawFPS(10, 70);
+        
+        // Add debug information
+        char debugText[512];
+        sprintf(debugText, "GameState: %d | Stage: %d | StageState: %d", 
+                game->gameState, game->currentStageNumber, 
+                (game->currentStageNumber > 0) ? game->currentStage.state : -1);
+        DrawText(debugText, 10, 100, 16, RED);
+        
+        sprintf(debugText, "Player: (%.1f,%.1f) | Particles: %d | Enemies: %d", 
+                game->player.position.x, game->player.position.y, PARTICLE_COUNT, game->enemyCount);
+        DrawText(debugText, 10, 120, 16, RED);
+        
+        sprintf(debugText, "StageTimer: %.1f | WaveTimer: %.1f | Wave: %d/%d", 
+                game->stageTimer, 
+                (game->currentStageNumber > 0) ? game->currentStage.waveTimer : 0.0f,
+                (game->currentStageNumber > 0) ? game->currentStage.currentWave : -1,
+                (game->currentStageNumber > 0) ? game->currentStage.waveCount : -1);
+        DrawText(debugText, 10, 140, 16, RED);
+        
+        sprintf(debugText, "EnemiesSpawned: %d | EnemiesKilled: %d/%d", 
+                (game->currentStageNumber > 0) ? game->currentStage.totalEnemiesSpawned : 0,
+                (game->currentStageNumber > 0) ? game->currentStage.enemiesKilled : 0,
+                (game->currentStageNumber > 0) ? game->currentStage.targetKills : 0);
+        DrawText(debugText, 10, 160, 16, RED);
     }
-    
-    // 폭발 파티클 그리기
-    for (int i = 0; i < game.explosionParticleCount; i++) {
-        DrawExplosionParticle(game.explosionParticles[i]);
-    }
-    
-    // Draw all enemies
-    for (int i = 0; i < game.enemyCount; i++) {
-        DrawEnemy(game.enemies[i]);
-    }
-    
-    // 점수 표시
-    char scoreText[32];
-    sprintf(scoreText, "Score: %d", game.score);
-    DrawText(scoreText, 10, 10, 20, BLACK);
-    // 부스트 게이지 표시 (우상단)
-    int barW = 120, barH = 12;
-    int barX = game.screenWidth - barW - 10;
-    int barY = 10;
-    DrawRectangle(barX-2, barY-2, barW+4, barH+4, GRAY); // border
-    int boostW = (int)(barW * (game.player.boostGauge/BOOST_GAUGE_MAX));
-    DrawRectangle(barX, barY, boostW, barH, SKYBLUE);
-    DrawRectangleLines(barX-2, barY-2, barW+4, barH+4, DARKBLUE);
-    // UX: If boostGauge <= 50, gray out right half and show lock
-    if (game.player.boostGauge <= 50.0f) {
-        DrawRectangle(barX + barW/2, barY, barW/2, barH, (Color){180,180,180,180});
-        DrawText("BOOST LOCKED", barX + barW/2 - 8, barY - 18, 14, DARKGRAY);
-    }
-    // 체력(하트) 표시
-    for (int i = 0; i < game.player.health; i++) {
-        DrawRectangle(10 + i * 30, 40, 20, 20, RED);
-    }
-    
-    // 플레이어 그리기 (무적 시 깜빡임)
-    if (!game.player.isInvincible || ((int)(GetTime() * 10) % 2 == 0)) {
-        DrawRectangle(game.player.position.x, game.player.position.y, game.player.size, game.player.size, RED);
-    }
-    
-    // FPS 표시
-    DrawFPS(10, 70);
     
     // 게임 오버 화면
-    if (game.gameState == GAME_STATE_OVER) {
-        int sw = game.screenWidth;
-        int sh = game.screenHeight;
+    if (game->gameState == GAME_STATE_OVER) {
+        int sw = game->screenWidth;
+        int sh = game->screenHeight;
         DrawText("GAME OVER", sw/2 - 100, sh/2 - 90, 40, RED);
         char scoreText[64];
-        sprintf(scoreText, "Final Score: %d", game.score);
+        sprintf(scoreText, "Final Score: %d", game->score);
         DrawText(scoreText, sw/2 - 100, sh/2 - 40, 30, BLACK);
         DrawText("Press Enter to register your score!", sw/2 - 180, sh/2 + 10, 20, DARKGRAY);
     }
-    if (game.gameState == GAME_STATE_SCORE_ENTRY) {
-        int sw = game.screenWidth;
-        int sh = game.screenHeight;
+    if (game->gameState == GAME_STATE_SCORE_ENTRY) {
+        int sw = game->screenWidth;
+        int sh = game->screenHeight;
         DrawText("Enter your name:", sw/2 - 120, sh/2 - 60, 30, BLACK);
         DrawRectangle(sw/2 - 120, sh/2 - 20, 300, 40, LIGHTGRAY);
-        DrawText(game.playerName, sw/2 - 110, sh/2 - 10, 30, MAROON);
-        if ((int)(GetTime()*2)%2 == 0 && game.nameLength < MAX_NAME_LENGTH-1) {
-            DrawText("_", sw/2 - 110 + MeasureText(game.playerName, 30), sh/2 - 10, 30, MAROON);
+        DrawText(game->playerName, sw/2 - 110, sh/2 - 10, 30, MAROON);
+        if ((int)(GetTime()*2)%2 == 0 && game->nameLength < MAX_NAME_LENGTH-1) {
+            DrawText("_", sw/2 - 110 + MeasureText(game->playerName, 30), sh/2 - 10, 30, MAROON);
         }
         DrawText("Press Enter to save", sw/2 - 120, sh/2 + 30, 20, DARKGRAY);
         // Scoreboard display
         DrawText("SCOREBOARD", sw/2 - 100, sh/2 + 70, 28, BLUE);
-        for (int i = 0; i < game.scoreboardCount; i++) {
+        for (int i = 0; i < game->scoreboardCount; i++) {
             char entry[64];
-            sprintf(entry, "%2d. %-15s %6d", i+1, game.scoreboard[i].name, game.scoreboard[i].score);
+            sprintf(entry, "%2d. %-15s %6d", i+1, game->scoreboard[i].name, game->scoreboard[i].score);
             DrawText(entry, sw/2 - 100, sh/2 + 100 + i*28, 24, (i==0)?GOLD:BLACK);
         }
     }
@@ -580,4 +823,242 @@ void RegisterEnemyEventHandlers(void) {
     SubscribeToEvent(EVENT_ENEMY_DESTROYED, OnEnemyDestroyed, NULL);
     SubscribeToEvent(EVENT_ENEMY_HEALTH_CHANGED, OnEnemyHealthChanged, NULL);
     SubscribeToEvent(EVENT_ENEMY_STATE_CHANGED, OnEnemyStateChanged, NULL);
+}
+
+// Load a specific stage
+void LoadStage(Game* game, int stageNumber) {
+    // Reset stage-specific counters
+    game->enemiesKilledThisStage = 0;
+    game->stageTimer = 0.0f;
+    game->currentStageNumber = stageNumber;
+    
+    // Create the appropriate stage
+    switch (stageNumber) {
+        case 1: game->currentStage = CreateStage1(); break;
+        case 2: game->currentStage = CreateStage2(); break;
+        case 3: game->currentStage = CreateStage3(); break;
+        case 4: game->currentStage = CreateStage4(); break;
+        case 5: game->currentStage = CreateStage5(); break;
+        case 6: game->currentStage = CreateStage6(); break;
+        case 7: game->currentStage = CreateStage7(); break;
+        case 8: game->currentStage = CreateStage8(); break;
+        case 9: game->currentStage = CreateStage9(); break;
+        case 10: game->currentStage = CreateStage10(); break;
+        default: game->currentStage = CreateStage1(); break;
+    }
+    // Ensure all stage progression fields are reset
+    game->currentStage.currentWave = 0;
+    game->currentStage.waveTimer = 0.0f;
+    game->currentStage.stateTimer = 0.0f;
+    game->currentStage.totalEnemiesSpawned = 0;
+    
+    // Clear existing enemies
+    game->enemyCount = 0;
+    
+    // Apply stage modifiers
+    if (game->currentStage.particleAttractionMultiplier > 0) {
+        // This would affect particle attraction force
+    }
+    
+    // Publish stage started event
+    StageChangeEventData* stageData = malloc(sizeof(StageChangeEventData));
+    stageData->oldStageNumber = stageNumber - 1;
+    stageData->newStageNumber = stageNumber;
+    stageData->enemiesKilled = game->totalEnemiesKilled;
+    stageData->score = game->score;
+    PublishEvent(EVENT_STAGE_STARTED, stageData);
+    
+    // Set appropriate game state
+    if (stageNumber == 6 || stageNumber == 10) {
+        game->gameState = GAME_STATE_STAGE_INTRO;
+        game->currentStage.state = STAGE_STATE_BOSS_WARNING;
+    } else {
+        game->gameState = GAME_STATE_STAGE_INTRO;
+        game->currentStage.state = STAGE_STATE_INTRO;
+    }
+}
+
+// Update stage system
+void UpdateStageSystem(Game* game) {
+    if (game->gameState != GAME_STATE_PLAYING) return;
+    
+    game->stageTimer += game->deltaTime;
+    
+    // Update current stage
+    UpdateStage(&game->currentStage, game->deltaTime);
+    
+    // Debug output every 2 seconds
+    static float lastDebugTime = 0;
+    if (game->stageTimer - lastDebugTime >= 2.0f) {
+        printf("UpdateStageSystem: stageTimer=%.1f, waveTimer=%.1f, currentWave=%d, totalEnemiesSpawned=%d, enemyCount=%d\n", 
+               game->stageTimer, game->currentStage.waveTimer, game->currentStage.currentWave, 
+               game->currentStage.totalEnemiesSpawned, game->enemyCount);
+        
+        bool shouldSpawn = ShouldSpawnEnemy(&game->currentStage, game->stageTimer);
+        printf("ShouldSpawnEnemy=%s, maxEnemiesAlive=%d\n", shouldSpawn ? "true" : "false", game->currentStage.maxEnemiesAlive);
+        lastDebugTime = game->stageTimer;
+    }
+    
+    // Check if we need to spawn enemies
+    if (ShouldSpawnEnemy(&game->currentStage, game->stageTimer) && 
+        game->enemyCount < game->currentStage.maxEnemiesAlive) {
+        SpawnEnemyFromStage(game);
+    }
+    
+    // Check stage completion
+    CheckStageCompletion(game);
+}
+
+// Spawn enemy based on stage configuration
+void SpawnEnemyFromStage(Game* game) {
+    EnemyType type = GetNextEnemyType(&game->currentStage);
+    Vector2 spawnPos = GetEnemySpawnPosition(&game->currentStage, game->screenWidth, game->screenHeight);
+    
+    // Create enemy with stage modifiers
+    Enemy newEnemy = InitEnemyByType(type, game->screenWidth, game->screenHeight, game->player.position);
+    newEnemy.position = spawnPos;
+    
+    // Apply stage modifiers
+    newEnemy.health *= game->currentStage.enemyHealthMultiplier;
+    newEnemy.maxHealth *= game->currentStage.enemyHealthMultiplier;
+    newEnemy.velocity.x *= game->currentStage.enemySpeedMultiplier;
+    newEnemy.velocity.y *= game->currentStage.enemySpeedMultiplier;
+    newEnemy.radius *= game->currentStage.enemySizeMultiplier;
+    
+    // Add to game
+    game->enemies[game->enemyCount] = newEnemy;
+    game->currentStage.totalEnemiesSpawned++;
+    
+    // Publish enemy spawned event
+    EnemyEventData* data = MemoryPool_Alloc(&g_enemyEventPool);
+    if (data) {
+        data->enemyIndex = game->enemyCount;
+        data->enemyPtr = &game->enemies[game->enemyCount];
+        PublishEvent(EVENT_ENEMY_SPAWNED, data);
+    }
+    
+    game->enemyCount++;
+    game->lastEnemySpawnTime = GetTime();
+}
+
+// Spawn enemy by type (used for splitting enemies)
+void SpawnEnemyByType(Game* game, EnemyType type) {
+    if (game->enemyCount >= MAX_ENEMIES) return;
+    
+    Enemy newEnemy = InitEnemyByType(type, game->screenWidth, game->screenHeight, game->player.position);
+    
+    // Apply stage modifiers if in a stage
+    if (game->gameState == GAME_STATE_PLAYING) {
+        newEnemy.health *= game->currentStage.enemyHealthMultiplier;
+        newEnemy.maxHealth *= game->currentStage.enemyHealthMultiplier;
+        newEnemy.velocity.x *= game->currentStage.enemySpeedMultiplier;
+        newEnemy.velocity.y *= game->currentStage.enemySpeedMultiplier;
+    }
+    
+    game->enemies[game->enemyCount++] = newEnemy;
+}
+
+// Handle enemy splitting
+void HandleEnemySplit(Game* game, Enemy* originalEnemy) {
+    if (!ShouldEnemySplit(originalEnemy)) return;
+    if (game->enemyCount + 2 > MAX_ENEMIES) return;
+    
+    // Create two smaller enemies
+    for (int i = 0; i < 2; i++) {
+        Enemy splitEnemy = InitEnemyByType(ENEMY_TYPE_SPLITTER, game->screenWidth, game->screenHeight, game->player.position);
+        
+        // Position near original
+        splitEnemy.position.x = originalEnemy->position.x + GetRandomValue(-30, 30);
+        splitEnemy.position.y = originalEnemy->position.y + GetRandomValue(-30, 30);
+        
+        // Smaller size and health
+        splitEnemy.radius = originalEnemy->radius * SPLIT_SIZE_REDUCTION;
+        splitEnemy.health = originalEnemy->maxHealth * 0.5f;
+        splitEnemy.maxHealth = splitEnemy.health;
+        splitEnemy.splitCount = originalEnemy->splitCount - 1;
+        
+        // Random velocity
+        splitEnemy.velocity.x = GetRandomValue(-100, 100) / 50.0f;
+        splitEnemy.velocity.y = GetRandomValue(-100, 100) / 50.0f;
+        
+        game->enemies[game->enemyCount++] = splitEnemy;
+        
+        // Publish split event
+        SpecialAbilityEventData* data = malloc(sizeof(SpecialAbilityEventData));
+        data->enemyIndex = game->enemyCount - 1;
+        data->enemyPtr = &game->enemies[game->enemyCount - 1];
+        data->abilityType = 1; // Split
+        data->position = splitEnemy.position;
+        PublishEvent(EVENT_ENEMY_SPLIT, data);
+    }
+}
+
+// Handle cluster explosion
+void HandleClusterExplosion(Game* game, Enemy* clusterEnemy) {
+    if (clusterEnemy->type != ENEMY_TYPE_CLUSTER) return;
+    
+    // Check for nearby enemies to trigger chain reaction
+    for (int i = 0; i < game->enemyCount; i++) {
+        float distance = Vector2Distance(game->enemies[i].position, clusterEnemy->position);
+        
+        if (distance < CLUSTER_EXPLOSION_RADIUS && distance > 0) {
+            // Damage nearby enemies
+            float damage = (1.0f - distance / CLUSTER_EXPLOSION_RADIUS) * 50.0f;
+            DamageEnemy(&game->enemies[i], damage);
+            
+            // Push them away
+            Vector2 pushDir = Vector2Subtract(game->enemies[i].position, clusterEnemy->position);
+            pushDir = Vector2Normalize(pushDir);
+            game->enemies[i].velocity.x += pushDir.x * 5.0f;
+            game->enemies[i].velocity.y += pushDir.y * 5.0f;
+        }
+    }
+    
+    // Create explosion effect
+    ParticleEffectEventData* effectData = malloc(sizeof(ParticleEffectEventData));
+    effectData->position = clusterEnemy->position;
+    effectData->effectType = 0; // Explosion
+    effectData->radius = CLUSTER_EXPLOSION_RADIUS;
+    effectData->color = MAGENTA;
+    PublishEvent(EVENT_PARTICLE_EFFECT, effectData);
+}
+
+// Check stage completion
+void CheckStageCompletion(Game* game) {
+    if (game->currentStage.state != STAGE_STATE_ACTIVE) return;
+    
+    // Update kill count
+    game->currentStage.enemiesKilled = game->enemiesKilledThisStage;
+    
+    if (IsStageComplete(&game->currentStage)) {
+        game->currentStage.state = STAGE_STATE_COMPLETE;
+        game->gameState = GAME_STATE_STAGE_COMPLETE;
+        
+        // Publish stage complete event
+        StageChangeEventData* data = malloc(sizeof(StageChangeEventData));
+        data->oldStageNumber = game->currentStageNumber;
+        data->newStageNumber = game->currentStageNumber + 1;
+        data->enemiesKilled = game->enemiesKilledThisStage;
+        data->score = game->score;
+        PublishEvent(EVENT_STAGE_COMPLETED, data);
+        
+        // Bonus score for stage completion
+        game->score += 500 * game->currentStageNumber;
+    }
+}
+
+// Transition to next stage
+void TransitionToNextStage(Game* game) {
+    if (game->currentStageNumber >= 10) {
+        // Victory!
+        game->gameState = GAME_STATE_VICTORY;
+        return;
+    }
+    
+    LoadStage(game, game->currentStageNumber + 1);
+}
+
+// Register stage event handlers
+void RegisterStageEventHandlers(Game* game) {
+    // Stage event handlers would be implemented here
 } 

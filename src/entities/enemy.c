@@ -1,51 +1,426 @@
 #include "enemy.h"
 #include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+#include "raymath.h"
 
-static float Lerp(float a, float b, float t);
+static float LerpFloat(float a, float b, float t);
 
-Enemy InitEnemy(int screenWidth, int screenHeight) {
-    // Calculate random size multiplier between MIN and MAX
-    float enemySize = GetRandomValue(ENEMY_MIN_SIZE, ENEMY_MAX_SIZE);
+// Initialize enemy by type
+Enemy InitEnemyByType(EnemyType type, int screenWidth, int screenHeight, Vector2 playerPos) {
+    Enemy enemy = {0};
     
-    Enemy enemy = {
-        .position = {
-            GetRandomValue(0, screenWidth),
-            GetRandomValue(0, screenHeight)
-        },
-        .velocity = {
-            GetRandomValue(-100, 100) / 100.0f,
-            GetRandomValue(-100, 100) / 100.0f
-        },
-        .color = PURPLE,
-        .spawnTime = GetTime(),
-        .radius = enemySize,  // Use PLAYER_BASE_SIZE instead
-        .health = enemySize*10.0f, 
-        .maxHealth = enemySize*10.0f, 
+    // Common initialization
+    enemy.type = type;
+    enemy.position = (Vector2){
+        GetRandomValue(100, screenWidth - 100),
+        GetRandomValue(100, screenHeight - 100)
     };
+    enemy.spawnTime = GetTime();
+    enemy.patternTimer = 0.0f;
+    enemy.specialTimer = 0.0f;
+    enemy.phase = 0;
+    enemy.phaseTimer = 0.0f;
+    enemy.isInvulnerable = false;
+    
+    // Type-specific initialization
+    switch (type) {
+        case ENEMY_TYPE_BASIC:
+            enemy.radius = GetRandomValue(ENEMY_MIN_SIZE, ENEMY_MAX_SIZE);
+            enemy.maxHealth = enemy.radius * 10.0f;
+            enemy.movePattern = MOVE_PATTERN_RANDOM;
+            enemy.aiState = AI_STATE_PATROL;
+            enemy.color = PURPLE;
+            enemy.velocity = (Vector2){
+                GetRandomValue(-50, 50) / 50.0f,
+                GetRandomValue(-50, 50) / 50.0f
+            };
+            break;
+            
+        case ENEMY_TYPE_TRACKER:
+            enemy.radius = GetRandomValue(ENEMY_MIN_SIZE - 2, ENEMY_MAX_SIZE - 2);
+            enemy.maxHealth = enemy.radius * 12.0f;
+            enemy.movePattern = MOVE_PATTERN_TRACKING;
+            enemy.aiState = AI_STATE_CHASE;
+            enemy.color = RED;
+            enemy.velocity = (Vector2){0, 0};
+            break;
+            
+        case ENEMY_TYPE_SPEEDY:
+            enemy.radius = GetRandomValue(ENEMY_MIN_SIZE - 3, ENEMY_MIN_SIZE);
+            enemy.maxHealth = enemy.radius * 8.0f;
+            enemy.movePattern = MOVE_PATTERN_ZIGZAG;
+            enemy.aiState = AI_STATE_PATROL;
+            enemy.color = SKYBLUE;
+            enemy.velocity = (Vector2){
+                GetRandomValue(-100, 100) / 50.0f * SPEEDY_SPEED_MULT,
+                GetRandomValue(-100, 100) / 50.0f * SPEEDY_SPEED_MULT
+            };
+            break;
+            
+        case ENEMY_TYPE_SPLITTER:
+            enemy.radius = GetRandomValue(ENEMY_MAX_SIZE, ENEMY_MAX_SIZE + 5);
+            enemy.maxHealth = enemy.radius * 15.0f;
+            enemy.movePattern = MOVE_PATTERN_STRAIGHT;
+            enemy.aiState = AI_STATE_PATROL;
+            enemy.color = GREEN;
+            enemy.splitCount = 2;  // Can split twice
+            enemy.velocity = (Vector2){
+                GetRandomValue(-30, 30) / 50.0f,
+                GetRandomValue(-30, 30) / 50.0f
+            };
+            break;
+            
+        case ENEMY_TYPE_ORBITER:
+            enemy.radius = GetRandomValue(ENEMY_MIN_SIZE, ENEMY_MAX_SIZE);
+            enemy.maxHealth = enemy.radius * 11.0f;
+            enemy.movePattern = MOVE_PATTERN_CIRCULAR;
+            enemy.aiState = AI_STATE_SPECIAL;
+            enemy.color = ORANGE;
+            enemy.orbitCenter = enemy.position;
+            enemy.orbitRadius = 100.0f;
+            enemy.angle = 0.0f;
+            break;
+            
+        case ENEMY_TYPE_BOSS_1:
+            enemy.radius = ENEMY_MAX_SIZE * BOSS_SIZE_MULT;
+            enemy.maxHealth = 500.0f;
+            enemy.movePattern = MOVE_PATTERN_AGGRESSIVE;
+            enemy.aiState = AI_STATE_ATTACK;
+            enemy.color = DARKPURPLE;
+            enemy.hasShield = true;
+            enemy.shieldHealth = 200.0f;
+            enemy.velocity = (Vector2){0, 0};
+            break;
+            
+        case ENEMY_TYPE_TELEPORTER:
+            enemy.radius = GetRandomValue(ENEMY_MIN_SIZE, ENEMY_MAX_SIZE - 2);
+            enemy.maxHealth = enemy.radius * 10.0f;
+            enemy.movePattern = MOVE_PATTERN_TELEPORT;
+            enemy.aiState = AI_STATE_SPECIAL;
+            enemy.color = VIOLET;
+            enemy.velocity = (Vector2){0, 0};
+            break;
+            
+        case ENEMY_TYPE_REPULSOR:
+            enemy.radius = GetRandomValue(ENEMY_MAX_SIZE - 5, ENEMY_MAX_SIZE);
+            enemy.maxHealth = enemy.radius * 13.0f;
+            enemy.movePattern = MOVE_PATTERN_PATROL;
+            enemy.aiState = AI_STATE_SPECIAL;
+            enemy.color = YELLOW;
+            enemy.velocity = (Vector2){
+                GetRandomValue(-30, 30) / 50.0f,
+                GetRandomValue(-30, 30) / 50.0f
+            };
+            break;
+            
+        case ENEMY_TYPE_CLUSTER:
+            enemy.radius = GetRandomValue(ENEMY_MIN_SIZE, ENEMY_MAX_SIZE - 3);
+            enemy.maxHealth = enemy.radius * 9.0f;
+            enemy.movePattern = MOVE_PATTERN_WAVE;
+            enemy.aiState = AI_STATE_PATROL;
+            enemy.color = MAGENTA;
+            enemy.velocity = (Vector2){
+                GetRandomValue(-40, 40) / 50.0f,
+                GetRandomValue(-40, 40) / 50.0f
+            };
+            break;
+            
+        case ENEMY_TYPE_BOSS_FINAL:
+            enemy.radius = ENEMY_MAX_SIZE * BOSS_SIZE_MULT * 1.5f;
+            enemy.maxHealth = 1000.0f;
+            enemy.movePattern = MOVE_PATTERN_AGGRESSIVE;
+            enemy.aiState = AI_STATE_ATTACK;
+            enemy.color = GOLD;
+            enemy.hasShield = true;
+            enemy.shieldHealth = 500.0f;
+            enemy.velocity = (Vector2){0, 0};
+            enemy.phase = 0;
+            break;
+            
+        case ENEMY_TYPE_COUNT:
+            // This shouldn't happen - fallback to basic
+            return InitEnemyByType(ENEMY_TYPE_BASIC, screenWidth, screenHeight, playerPos);
+    }
+    
+    enemy.health = enemy.maxHealth;
+    enemy.originalColor = enemy.color;
+    enemy.targetPosition = playerPos;
     
     return enemy;
 }
 
-void UpdateEnemy(Enemy* enemy, int screenWidth, int screenHeight, float deltaTime) {
+// Legacy init function
+Enemy InitEnemy(int screenWidth, int screenHeight) {
+    return InitEnemyByType(ENEMY_TYPE_BASIC, screenWidth, screenHeight, (Vector2){screenWidth/2, screenHeight/2});
+}
+
+// Update enemy AI
+void UpdateEnemyAI(Enemy* enemy, Vector2 playerPos, float deltaTime) {
+    enemy->patternTimer += deltaTime;
+    enemy->specialTimer += deltaTime;
+    
+    // State-specific AI behavior
+    switch (enemy->aiState) {
+        case AI_STATE_IDLE:
+            // Do nothing special
+            break;
+            
+        case AI_STATE_PATROL:
+            // Change direction occasionally
+            if (enemy->patternTimer > 2.0f + GetRandomValue(0, 20) / 10.0f) {
+                enemy->patternTimer = 0.0f;
+                enemy->velocity.x = GetRandomValue(-100, 100) / 100.0f;
+                enemy->velocity.y = GetRandomValue(-100, 100) / 100.0f;
+                
+                // Speed modifier based on type
+                if (enemy->type == ENEMY_TYPE_SPEEDY) {
+                    enemy->velocity.x *= SPEEDY_SPEED_MULT;
+                    enemy->velocity.y *= SPEEDY_SPEED_MULT;
+                }
+            }
+            break;
+            
+        case AI_STATE_CHASE:
+            // Update target position
+            enemy->targetPosition = playerPos;
+            break;
+            
+        case AI_STATE_ATTACK:
+            // Boss attack patterns
+            if (enemy->type == ENEMY_TYPE_BOSS_1 || enemy->type == ENEMY_TYPE_BOSS_FINAL) {
+                enemy->phaseTimer += deltaTime;
+                
+                // Phase transitions
+                if (enemy->health < enemy->maxHealth * 0.7f && enemy->phase == 0) {
+                    enemy->phase = 1;
+                    enemy->isInvulnerable = true;
+                    enemy->phaseTimer = 0.0f;
+                } else if (enemy->health < enemy->maxHealth * 0.3f && enemy->phase == 1) {
+                    enemy->phase = 2;
+                    enemy->isInvulnerable = true;
+                    enemy->phaseTimer = 0.0f;
+                }
+                
+                // End invulnerability after phase change
+                if (enemy->isInvulnerable && enemy->phaseTimer > 1.5f) {
+                    enemy->isInvulnerable = false;
+                }
+            }
+            break;
+            
+        case AI_STATE_FLEE: {
+            // Move away from player
+            Vector2 awayFromPlayer = {
+                enemy->position.x - playerPos.x,
+                enemy->position.y - playerPos.y
+            };
+            float dist = sqrtf(awayFromPlayer.x * awayFromPlayer.x + awayFromPlayer.y * awayFromPlayer.y);
+            if (dist > 0) {
+                enemy->velocity.x = (awayFromPlayer.x / dist) * 2.0f;
+                enemy->velocity.y = (awayFromPlayer.y / dist) * 2.0f;
+            }
+            break;
+        }
+            
+        case AI_STATE_SPECIAL:
+            // Execute special abilities
+            ExecuteEnemySpecialAbility(enemy, playerPos);
+            break;
+    }
+}
+
+// Update enemy movement based on pattern
+void UpdateEnemyMovement(Enemy* enemy, Vector2 playerPos, float deltaTime) {
+    switch (enemy->movePattern) {
+        case MOVE_PATTERN_RANDOM:
+            // Already handled in AI update
+            break;
+            
+        case MOVE_PATTERN_STRAIGHT:
+            // Just move in current direction
+            break;
+            
+        case MOVE_PATTERN_TRACKING:
+            // Move toward player
+            if (enemy->aiState == AI_STATE_CHASE) {
+                Vector2 toPlayer = {
+                    playerPos.x - enemy->position.x,
+                    playerPos.y - enemy->position.y
+                };
+                float dist = sqrtf(toPlayer.x * toPlayer.x + toPlayer.y * toPlayer.y);
+                if (dist > 0) {
+                    float speed = TRACKER_SPEED_MULT;
+                    if (enemy->type == ENEMY_TYPE_BOSS_1 || enemy->type == ENEMY_TYPE_BOSS_FINAL) {
+                        speed = 0.5f + enemy->phase * 0.3f;  // Bosses get faster in later phases
+                    }
+                    enemy->velocity.x = (toPlayer.x / dist) * speed;
+                    enemy->velocity.y = (toPlayer.y / dist) * speed;
+                }
+            }
+            break;
+            
+        case MOVE_PATTERN_CIRCULAR:
+            // Orbit around center point
+            enemy->angle += deltaTime * 2.0f;  // 2 radians per second
+            enemy->position.x = enemy->orbitCenter.x + cosf(enemy->angle) * enemy->orbitRadius;
+            enemy->position.y = enemy->orbitCenter.y + sinf(enemy->angle) * enemy->orbitRadius;
+            return;  // Skip normal position update
+            
+        case MOVE_PATTERN_ZIGZAG:
+            // Change direction frequently
+            if (enemy->patternTimer > 0.5f) {
+                enemy->patternTimer = 0.0f;
+                enemy->velocity.x = -enemy->velocity.x + GetRandomValue(-50, 50) / 100.0f;
+                enemy->velocity.y = -enemy->velocity.y + GetRandomValue(-50, 50) / 100.0f;
+                
+                // Maintain speed
+                float speed = sqrtf(enemy->velocity.x * enemy->velocity.x + enemy->velocity.y * enemy->velocity.y);
+                if (speed > 0) {
+                    float targetSpeed = (enemy->type == ENEMY_TYPE_SPEEDY) ? SPEEDY_SPEED_MULT * 2.0f : 1.5f;
+                    enemy->velocity.x = (enemy->velocity.x / speed) * targetSpeed;
+                    enemy->velocity.y = (enemy->velocity.y / speed) * targetSpeed;
+                }
+            }
+            break;
+            
+        case MOVE_PATTERN_SPIRAL:
+            enemy->angle += deltaTime * 3.0f;
+            enemy->orbitRadius += deltaTime * 20.0f;  // Expanding spiral
+            enemy->position.x = enemy->orbitCenter.x + cosf(enemy->angle) * enemy->orbitRadius;
+            enemy->position.y = enemy->orbitCenter.y + sinf(enemy->angle) * enemy->orbitRadius;
+            return;  // Skip normal position update
+            
+        case MOVE_PATTERN_TELEPORT:
+            // Handled in special ability
+            break;
+            
+        case MOVE_PATTERN_PATROL:
+            // Move between waypoints
+            if (Vector2Distance(enemy->position, enemy->targetPosition) < 50.0f) {
+                // Reached waypoint, pick new one
+                enemy->targetPosition.x = GetRandomValue(100, 700);
+                enemy->targetPosition.y = GetRandomValue(100, 700);
+            }
+            
+            Vector2 toTarget = {
+                enemy->targetPosition.x - enemy->position.x,
+                enemy->targetPosition.y - enemy->position.y
+            };
+            float dist = sqrtf(toTarget.x * toTarget.x + toTarget.y * toTarget.y);
+            if (dist > 0) {
+                enemy->velocity.x = (toTarget.x / dist) * 1.0f;
+                enemy->velocity.y = (toTarget.y / dist) * 1.0f;
+            }
+            break;
+            
+        case MOVE_PATTERN_WAVE:
+            // Sine wave movement
+            enemy->angle += deltaTime * 4.0f;
+            enemy->velocity.y = sinf(enemy->angle) * 2.0f;
+            break;
+            
+        case MOVE_PATTERN_AGGRESSIVE: {
+            // Fast tracking with prediction
+            Vector2 toPlayer = {
+                playerPos.x - enemy->position.x,
+                playerPos.y - enemy->position.y
+            };
+            float playerDist = sqrtf(toPlayer.x * toPlayer.x + toPlayer.y * toPlayer.y);
+            if (playerDist > 0) {
+                float speed = 2.0f + enemy->phase * 0.5f;
+                enemy->velocity.x = (toPlayer.x / playerDist) * speed;
+                enemy->velocity.y = (toPlayer.y / playerDist) * speed;
+            }
+            break;
+        }
+    }
+    
     // Update position based on velocity
     enemy->position.x += enemy->velocity.x;
     enemy->position.y += enemy->velocity.y;
-    
-    // Increase radius over time
-    enemy->radius += deltaTime * 15.0f; // Grows by 10 pixels per second
+}
 
-    // Increase maxHealth and health as radius grows
-    float prevMaxHealth = enemy->maxHealth;
-    enemy->maxHealth = enemy->radius * 10.0f;
-    // If health was full, keep it full; otherwise, keep the same ratio
-    if (enemy->health == prevMaxHealth) {
-        enemy->health = enemy->maxHealth;
-    } else {
-        float ratio = prevMaxHealth > 0 ? (enemy->health / prevMaxHealth) : 1.0f;
-        enemy->health = enemy->maxHealth * ratio;
+// Execute special abilities
+void ExecuteEnemySpecialAbility(Enemy* enemy, Vector2 playerPos) {
+    switch (enemy->type) {
+        case ENEMY_TYPE_TELEPORTER:
+            if (enemy->specialTimer > TELEPORT_COOLDOWN) {
+                enemy->specialTimer = 0.0f;
+                // Teleport to random position
+                enemy->position.x = GetRandomValue(100, 700);
+                enemy->position.y = GetRandomValue(100, 700);
+                
+                // Flash effect
+                enemy->color = WHITE;
+            } else if (enemy->specialTimer > 0.2f && enemy->color.r == 255) {
+                enemy->color = enemy->originalColor;
+            }
+            break;
+            
+        case ENEMY_TYPE_REPULSOR:
+            // Repulsion field is always active, handled in physics
+            break;
+            
+        case ENEMY_TYPE_BOSS_1:
+        case ENEMY_TYPE_BOSS_FINAL:
+            // Boss special attacks based on phase
+            if (enemy->phase >= 1 && enemy->specialTimer > 3.0f) {
+                enemy->specialTimer = 0.0f;
+                // Burst movement
+                enemy->velocity.x = GetRandomValue(-300, 300) / 100.0f;
+                enemy->velocity.y = GetRandomValue(-300, 300) / 100.0f;
+            }
+            
+            if (enemy->phase >= 2) {
+                // Rage mode - faster and more aggressive
+                enemy->color = RED;
+            }
+            break;
+            
+        // These enemy types don't have special abilities
+        case ENEMY_TYPE_BASIC:
+        case ENEMY_TYPE_TRACKER:
+        case ENEMY_TYPE_SPEEDY:
+        case ENEMY_TYPE_SPLITTER:
+        case ENEMY_TYPE_ORBITER:
+        case ENEMY_TYPE_CLUSTER:
+        case ENEMY_TYPE_COUNT:
+            // No special abilities
+            break;
+    }
+}
+
+// Main update function
+void UpdateEnemy(Enemy* enemy, int screenWidth, int screenHeight, float deltaTime) {
+    // Don't update if invulnerable (phase transition)
+    if (enemy->isInvulnerable) {
+        enemy->color = ((int)(GetTime() * 10) % 2 == 0) ? WHITE : enemy->originalColor;
+    }
+    
+    // Update position based on velocity (moved to UpdateEnemyMovement)
+    // enemy->position.x += enemy->velocity.x;
+    // enemy->position.y += enemy->velocity.y;
+    
+    // Increase radius over time for basic enemies
+    if (enemy->type == ENEMY_TYPE_BASIC) {
+        enemy->radius += deltaTime * 5.0f; // Slower growth
     }
 
-    // Screen boundary check with margin (allow center to go outside by radius*0.7)
+    // Update maxHealth and health as radius grows
+    if (enemy->type == ENEMY_TYPE_BASIC) {
+        float prevMaxHealth = enemy->maxHealth;
+        enemy->maxHealth = enemy->radius * 10.0f;
+        if (enemy->health == prevMaxHealth) {
+            enemy->health = enemy->maxHealth;
+        } else {
+            float ratio = prevMaxHealth > 0 ? (enemy->health / prevMaxHealth) : 1.0f;
+            enemy->health = enemy->maxHealth * ratio;
+        }
+    }
+
+    // Screen boundary check
     float margin = enemy->radius * 0.7f;
     if (enemy->position.x < -margin) {
         enemy->position.x = -margin;
@@ -65,45 +440,134 @@ void UpdateEnemy(Enemy* enemy, int screenWidth, int screenHeight, float deltaTim
     }
 }
 
+// Draw enemy
 void DrawEnemy(Enemy enemy) {
     float timeSinceSpawn = GetTime() - enemy.spawnTime;
     // Blink for first 0.5 seconds
     if (timeSinceSpawn < 0.5f && ((int)(GetTime() * 10) % 2 == 0)) {
         return; // Skip drawing (blink)
     }
+    
+    // Draw shield first if active
+    if (enemy.hasShield && enemy.shieldHealth > 0) {
+        DrawEnemyShield(enemy);
+    }
+    
+    // Color based on health
     float ratio = (enemy.maxHealth > 0) ? (enemy.health / enemy.maxHealth) : 0.0f;
     if (ratio < 0.0f) ratio = 0.0f;
     if (ratio > 1.0f) ratio = 1.0f;
-    Color c;
-    if (ratio > 0.5f) {
-        // PURPLE to RED
-        float t = (1.0f - ratio) * 2.0f; // 0~1
-        c.r = (unsigned char)(Lerp(PURPLE.r, RED.r, t));
-        c.g = (unsigned char)(Lerp(PURPLE.g, RED.g, t));
-        c.b = (unsigned char)(Lerp(PURPLE.b, RED.b, t));
-        c.a = (unsigned char)(255 * 1.0);
-    } else {
-        // RED to YELLOW
-        float t = (0.5f - ratio) * 2.0f; // 0~1
-        c.r = (unsigned char)(Lerp(RED.r, YELLOW.r, t));
-        c.g = (unsigned char)(Lerp(RED.g, YELLOW.g, t));
-        c.b = (unsigned char)(Lerp(RED.b, YELLOW.b, t));
-        c.a = (unsigned char)(255 * 1.0);
+    
+    Color c = enemy.color;
+    
+    // Special color handling for certain types
+    if (enemy.type == ENEMY_TYPE_BOSS_FINAL && enemy.phase >= 2) {
+        c = RED;  // Rage mode
+    } else if (enemy.isInvulnerable) {
+        // Handled in update
+    } else if (enemy.type != ENEMY_TYPE_TELEPORTER || enemy.color.r != 255) {
+        // Health-based color for non-teleporting enemies
+        if (ratio < 0.5f) {
+            float t = ratio * 2.0f;
+            c.r = (unsigned char)LerpFloat(255, enemy.originalColor.r, t);
+            c.g = (unsigned char)LerpFloat(255, enemy.originalColor.g, t);
+            c.b = (unsigned char)LerpFloat(255, enemy.originalColor.b, t);
+        }
     }
-    // 채도 보정: health가 낮을수록 색이 흰색에 가까워짐
-    float sat = ratio; // 1=원색, 0=흰색
-    c.r = (unsigned char)Lerp(255, c.r, sat);
-    c.g = (unsigned char)Lerp(255, c.g, sat);
-    c.b = (unsigned char)Lerp(255, c.b, sat);
+    
     DrawCircle(enemy.position.x, enemy.position.y, enemy.radius, c);
-    // Draw health text above the enemy
+    
+    // Draw type indicator for special enemies
+    if (enemy.type != ENEMY_TYPE_BASIC) {
+        const char* typeChar = "";
+        switch (enemy.type) {
+            case ENEMY_TYPE_TRACKER: typeChar = "T"; break;
+            case ENEMY_TYPE_SPEEDY: typeChar = "S"; break;
+            case ENEMY_TYPE_SPLITTER: typeChar = "X"; break;
+            case ENEMY_TYPE_ORBITER: typeChar = "O"; break;
+            case ENEMY_TYPE_TELEPORTER: typeChar = "!"; break;
+            case ENEMY_TYPE_REPULSOR: typeChar = "R"; break;
+            case ENEMY_TYPE_CLUSTER: typeChar = "C"; break;
+            case ENEMY_TYPE_BOSS_1: typeChar = "B1"; break;
+            case ENEMY_TYPE_BOSS_FINAL: typeChar = "BF"; break;
+            default: break;
+        }
+        
+        if (strlen(typeChar) > 0) {
+            int fontSize = (enemy.type == ENEMY_TYPE_BOSS_1 || enemy.type == ENEMY_TYPE_BOSS_FINAL) ? 24 : 16;
+            int textWidth = MeasureText(typeChar, fontSize);
+            DrawText(typeChar, enemy.position.x - textWidth/2, enemy.position.y - fontSize/2, fontSize, WHITE);
+        }
+    }
+    
+    // Draw health text
     char healthText[32];
     sprintf(healthText, "%d/%d", (int)enemy.health, (int)enemy.maxHealth);
     int textWidth = MeasureText(healthText, 16);
     DrawText(healthText, enemy.position.x - textWidth/2, enemy.position.y - enemy.radius - 20, 16, BLACK);
 }
 
+// Draw enemy shield
+void DrawEnemyShield(Enemy enemy) {
+    float shieldRatio = enemy.shieldHealth / (enemy.type == ENEMY_TYPE_BOSS_FINAL ? 500.0f : 200.0f);
+    Color shieldColor = Fade(SKYBLUE, 0.3f + shieldRatio * 0.3f);
+    DrawCircleLines(enemy.position.x, enemy.position.y, enemy.radius + 10, shieldColor);
+    DrawCircleLines(enemy.position.x, enemy.position.y, enemy.radius + 12, shieldColor);
+}
+
+// Damage enemy
+void DamageEnemy(Enemy* enemy, float damage) {
+    if (enemy->isInvulnerable) return;
+    
+    // Damage shield first
+    if (enemy->hasShield && enemy->shieldHealth > 0) {
+        enemy->shieldHealth -= damage;
+        if (enemy->shieldHealth < 0) {
+            enemy->health += enemy->shieldHealth;  // Apply remaining damage to health
+            enemy->shieldHealth = 0;
+            enemy->hasShield = false;
+        }
+    } else {
+        enemy->health -= damage;
+    }
+}
+
+// Check if enemy should split
+bool ShouldEnemySplit(Enemy* enemy) {
+    return enemy->type == ENEMY_TYPE_SPLITTER && 
+           enemy->health <= 0 && 
+           enemy->splitCount > 0 &&
+           enemy->radius > ENEMY_MIN_SIZE;
+}
+
+// Apply repulsion field to particles
+void ApplyRepulsionField(Enemy* enemy, void* particles, int particleCount) {
+    if (enemy->type != ENEMY_TYPE_REPULSOR) return;
+    
+    // This will be implemented in physics.c to avoid circular dependency
+    // The function signature is here for reference
+}
+
+// Change AI state
+void ChangeEnemyAIState(Enemy* enemy, AIState newState) {
+    enemy->aiState = newState;
+    enemy->patternTimer = 0.0f;
+    
+    // State entry logic
+    switch (newState) {
+        case AI_STATE_FLEE:
+            enemy->velocity.x *= 1.5f;
+            enemy->velocity.y *= 1.5f;
+            break;
+        case AI_STATE_ATTACK:
+            enemy->color = Fade(enemy->originalColor, 0.8f);
+            break;
+        default:
+            break;
+    }
+}
+
 // Helper function for color interpolation
-static float Lerp(float a, float b, float t) {
+static float LerpFloat(float a, float b, float t) {
     return a + (b - a) * t;
 } 
