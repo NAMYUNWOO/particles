@@ -149,8 +149,8 @@ void UpdateGame(Game* game) {
                 game->particles[i] = InitParticle(game->screenWidth, game->screenHeight);
             }
             
-            // Load Stage 2 for testing (skip Stage 1)
-            LoadStage(game, 1);
+            // set first stage (starts from 1) 
+            LoadStage(game, 2);
             
             // 게임 상태 직접 설정 (LoadStage에서도 설정하지만 명시적으로)
             game->gameState = GAME_STATE_STAGE_INTRO;

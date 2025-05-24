@@ -39,8 +39,15 @@ void UpdatePlayer(Player* player, int screenWidth, int screenHeight, int moveSpe
     
     // 부스트 게이지 관리 - 활성화된 부스트가 있는 경우
     if (isAnyBoostActive) {
-        player->boostGauge -= BOOST_GAUGE_CONSUME * deltaTime;
-        
+        float consumeRate = 0.0f;
+        // 각 부스트별 소모율 적용
+        if (player->isBoosting && hasEnoughGauge) {
+            consumeRate += PARTICLE_BOOST_CONSUME;
+        }
+        if (player->isSpeedBoosting && hasEnoughGauge) {
+            consumeRate += SPEED_BOOST_CONSUME;
+        }
+        player->boostGauge -= consumeRate * deltaTime;
         // 게이지가 고갈되면 부스트 중지
         if (player->boostGauge <= 0.0f) {
             player->boostGauge = 0.0f;

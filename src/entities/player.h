@@ -7,8 +7,9 @@
 // Constants
 #define PLAYER_BASE_SIZE 10.0f  // Base player size in pixels
 #define BOOST_GAUGE_MAX 100.0f
-#define BOOST_GAUGE_REGEN 10.0f // per second - 충전 속도 절반으로 감소
-#define BOOST_GAUGE_CONSUME 100.0f // per second
+#define BOOST_GAUGE_REGEN 20.0f // per second - 충전 속도 절반으로 감소
+#define PARTICLE_BOOST_CONSUME 10.0f   // SPACEBAR - 파티클 끌어당김 (per second)
+#define SPEED_BOOST_CONSUME 100.0f     // SHIFT - 속도 부스트 (per second)
 
 // Player structure
 typedef struct {
