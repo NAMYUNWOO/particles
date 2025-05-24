@@ -149,7 +149,7 @@ void UpdateGame(Game* game) {
                 game->particles[i] = InitParticle(game->screenWidth, game->screenHeight);
             }
             
-            // Load first stage
+            // Load Stage 2 for testing (skip Stage 1)
             LoadStage(game, 1);
             
             // 게임 상태 직접 설정 (LoadStage에서도 설정하지만 명시적으로)
@@ -168,23 +168,23 @@ void UpdateGame(Game* game) {
     
     if (game->gameState == GAME_STATE_STAGE_INTRO) {
         // Debug output
-        printf("STAGE_INTRO: state=%d, stateTimer=%.1f\n", game->currentStage.state, game->currentStage.stateTimer);
+        // printf("STAGE_INTRO: state=%d, stateTimer=%.1f\n", game->currentStage.state, game->currentStage.stateTimer);
         
         // Phase 1: Stage introduction (3 seconds)
         if (game->currentStage.state == STAGE_STATE_INTRO && game->currentStage.stateTimer > 3.0f) {
-            printf("Transitioning from INTRO to COUNTDOWN\n");
+            // printf("Transitioning from INTRO to COUNTDOWN\n");
             game->currentStage.state = STAGE_STATE_COUNTDOWN;
             game->currentStage.stateTimer = 0.0f; // Reset timer for countdown phase
         }
         // Phase 2: Countdown (3 seconds) 
         else if (game->currentStage.state == STAGE_STATE_COUNTDOWN && game->currentStage.stateTimer > 3.0f) {
-            printf("Transitioning from COUNTDOWN to PLAYING\n");
+            // printf("Transitioning from COUNTDOWN to PLAYING\n");
             game->gameState = GAME_STATE_PLAYING;
             game->currentStage.state = STAGE_STATE_ACTIVE;
         }
         // Boss warning handling
         else if (game->currentStage.state == STAGE_STATE_BOSS_WARNING && game->currentStage.stateTimer > 2.0f) {
-            printf("Transitioning from BOSS_WARNING to COUNTDOWN\n");
+            // printf("Transitioning from BOSS_WARNING to COUNTDOWN\n");
             game->currentStage.state = STAGE_STATE_COUNTDOWN;
             game->currentStage.stateTimer = 0.0f; // Reset timer for countdown phase
         }
@@ -527,30 +527,6 @@ void DrawGame(Game* game) {
         
         // FPS 표시
         DrawFPS(10, 70);
-        
-        // Add debug information
-        char debugText[512];
-        sprintf(debugText, "GameState: %d | Stage: %d | StageState: %d", 
-                game->gameState, game->currentStageNumber, 
-                (game->currentStageNumber > 0) ? game->currentStage.state : -1);
-        DrawText(debugText, 10, 100, 16, RED);
-        
-        sprintf(debugText, "Player: (%.1f,%.1f) | Particles: %d | Enemies: %d", 
-                game->player.position.x, game->player.position.y, PARTICLE_COUNT, game->enemyCount);
-        DrawText(debugText, 10, 120, 16, RED);
-        
-        sprintf(debugText, "StageTimer: %.1f | WaveTimer: %.1f | Wave: %d/%d", 
-                game->stageTimer, 
-                (game->currentStageNumber > 0) ? game->currentStage.waveTimer : 0.0f,
-                (game->currentStageNumber > 0) ? game->currentStage.currentWave : -1,
-                (game->currentStageNumber > 0) ? game->currentStage.waveCount : -1);
-        DrawText(debugText, 10, 140, 16, RED);
-        
-        sprintf(debugText, "EnemiesSpawned: %d | EnemiesKilled: %d/%d", 
-                (game->currentStageNumber > 0) ? game->currentStage.totalEnemiesSpawned : 0,
-                (game->currentStageNumber > 0) ? game->currentStage.enemiesKilled : 0,
-                (game->currentStageNumber > 0) ? game->currentStage.targetKills : 0);
-        DrawText(debugText, 10, 160, 16, RED);
     }
     
     // 게임 오버 화면
@@ -888,6 +864,7 @@ void UpdateStageSystem(Game* game) {
     UpdateStage(&game->currentStage, game->deltaTime);
     
     // Debug output every 2 seconds
+    /*
     static float lastDebugTime = 0;
     if (game->stageTimer - lastDebugTime >= 2.0f) {
         printf("UpdateStageSystem: stageTimer=%.1f, waveTimer=%.1f, currentWave=%d, totalEnemiesSpawned=%d, enemyCount=%d\n", 
@@ -898,6 +875,7 @@ void UpdateStageSystem(Game* game) {
         printf("ShouldSpawnEnemy=%s, maxEnemiesAlive=%d\n", shouldSpawn ? "true" : "false", game->currentStage.maxEnemiesAlive);
         lastDebugTime = game->stageTimer;
     }
+    */
     
     // Check if we need to spawn enemies
     if (ShouldSpawnEnemy(&game->currentStage, game->stageTimer) && 

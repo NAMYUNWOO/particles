@@ -30,6 +30,7 @@ Stage CreateStage1(void) {
     stage.maxEnemiesAlive = 4;
     stage.enemyHealthMultiplier = 1.0f;
     stage.enemySpeedMultiplier = 1.0f;
+    stage.enemySizeMultiplier = 1.0f;
     stage.backgroundColor = RAYWHITE;
     stage.particleColor = BLACK;
     
@@ -70,6 +71,7 @@ Stage CreateStage2(void) {
     stage.maxEnemiesAlive = 5;
     stage.enemyHealthMultiplier = 1.2f;
     stage.enemySpeedMultiplier = 1.1f;
+    stage.enemySizeMultiplier = 1.0f;
     stage.backgroundColor = (Color){240, 240, 240, 255};
     stage.particleColor = DARKGRAY;
     
@@ -110,6 +112,7 @@ Stage CreateStage3(void) {
     stage.maxEnemiesAlive = 6;
     stage.enemyHealthMultiplier = 1.0f;  // Speedy enemies have less health
     stage.enemySpeedMultiplier = 1.5f;
+    stage.enemySizeMultiplier = 1.0f;
     stage.backgroundColor = (Color){220, 220, 255, 255};
     stage.particleColor = DARKBLUE;
     
@@ -150,6 +153,7 @@ Stage CreateStage4(void) {
     stage.maxEnemiesAlive = 8;
     stage.enemyHealthMultiplier = 1.3f;
     stage.enemySpeedMultiplier = 1.0f;
+    stage.enemySizeMultiplier = 1.0f;
     stage.backgroundColor = (Color){255, 220, 220, 255};
     stage.particleColor = MAROON;
     
@@ -199,6 +203,7 @@ Stage CreateStage5(void) {
     stage.maxEnemiesAlive = 7;
     stage.enemyHealthMultiplier = 1.4f;
     stage.enemySpeedMultiplier = 1.2f;
+    stage.enemySizeMultiplier = 1.0f;
     stage.backgroundColor = (Color){220, 255, 220, 255};
     stage.particleColor = DARKGREEN;
     
@@ -235,6 +240,7 @@ Stage CreateStage6(void) {
     stage.maxEnemiesAlive = 5;
     stage.enemyHealthMultiplier = 2.0f;  // Boss has much more health
     stage.enemySpeedMultiplier = 0.8f;
+    stage.enemySizeMultiplier = 1.5f;  // Boss is larger
     stage.backgroundColor = (Color){40, 40, 40, 255};
     stage.particleColor = RED;
     stage.hasSpecialEffect = true;
@@ -283,6 +289,7 @@ Stage CreateStage7(void) {
     stage.maxEnemiesAlive = 6;
     stage.enemyHealthMultiplier = 1.5f;
     stage.enemySpeedMultiplier = 1.3f;
+    stage.enemySizeMultiplier = 1.0f;
     stage.backgroundColor = (Color){200, 200, 255, 255};
     stage.particleColor = PURPLE;
     
@@ -330,6 +337,7 @@ Stage CreateStage8(void) {
     stage.maxEnemiesAlive = 7;
     stage.enemyHealthMultiplier = 1.6f;
     stage.enemySpeedMultiplier = 1.1f;
+    stage.enemySizeMultiplier = 1.0f;
     stage.backgroundColor = (Color){255, 240, 200, 255};
     stage.particleColor = ORANGE;
     stage.particleAttractionMultiplier = 0.7f;  // Particles are harder to control
@@ -386,6 +394,7 @@ Stage CreateStage9(void) {
     stage.maxEnemiesAlive = 8;
     stage.enemyHealthMultiplier = 1.7f;
     stage.enemySpeedMultiplier = 1.4f;
+    stage.enemySizeMultiplier = 1.0f;
     stage.backgroundColor = (Color){255, 200, 200, 255};
     stage.particleColor = DARKPURPLE;
     
@@ -432,6 +441,7 @@ Stage CreateStage10(void) {
     stage.maxEnemiesAlive = 10;
     stage.enemyHealthMultiplier = 3.0f;  // Final boss has massive health
     stage.enemySpeedMultiplier = 1.5f;
+    stage.enemySizeMultiplier = 2.0f;  // Final boss is much larger
     stage.backgroundColor = BLACK;
     stage.particleColor = GOLD;
     stage.hasSpecialEffect = true;
