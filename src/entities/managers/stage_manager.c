@@ -13,8 +13,8 @@ Stage CreateStage1(void) {
     stage.waveCount = 3;
     stage.waves[0] = (EnemyWave){
         .spawnTime = 0.0f,
-        .enemyCount = 5,
-        .enemyTypes = {ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC},
+        .enemyCount = 5, //1,
+        .enemyTypes = {ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC},//{ENEMY_TYPE_BASIC},
         .spawnDelay = 1.0f,
         .useRandomSpawn = true
     };
@@ -28,8 +28,8 @@ Stage CreateStage1(void) {
     };
     stage.waves[2] = (EnemyWave){
         .spawnTime = 15.0f,
-        .enemyCount = 3,
-        .enemyTypes = {ENEMY_TYPE_BASIC, ENEMY_TYPE_TRACKER, ENEMY_TYPE_BASIC},
+        .enemyCount = 3, //1,
+        .enemyTypes = {ENEMY_TYPE_BASIC, ENEMY_TYPE_TRACKER, ENEMY_TYPE_BASIC},//{ENEMY_TYPE_BASIC},
         .spawnDelay = 2.0f,
         .useRandomSpawn = true
     };

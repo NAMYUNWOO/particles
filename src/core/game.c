@@ -382,7 +382,12 @@ void UpdateGame(Game* game) {
                     
                     // Update color based on storm state
                     if (stormActive) {
-                        game->enemies[i].color = (Color){150, 0, 50, 255};  // Reddish when storm active
+                        // Calculate storm strength for color interpolation
+                        float stormStrength = 1.0f - (game->enemies[i].stormCycleTimer / 5.0f);
+                        // Interpolate from bright red to dark red as storm weakens
+                        int redValue = 100 + (int)(100 * stormStrength);  // 200 to 100
+                        int greenValue = (int)(50 * (1.0f - stormStrength));  // 0 to 50
+                        game->enemies[i].color = (Color){redValue, greenValue, 50, 255};
                     } else {
                         game->enemies[i].color = (Color){100, 150, 50, 255};  // Greenish when vulnerable
                     }
@@ -391,6 +396,14 @@ void UpdateGame(Game* game) {
                     if (stormActive) {
                         #define SEMI_STORM_RADIUS 150.0f
                         #define SEMI_STORM_FORCE 3.0f
+                        
+                        // Calculate storm strength that decreases over time (1.0 to 0.0 over 5 seconds)
+                        // float stormStrength = 1.0f - (game->enemies[i].stormCycleTimer / 5.0f);
+                        
+                        // Alternative: Use sine wave for smoother transition
+                        float stormStrength = fmaxf(cosf((game->enemies[i].stormCycleTimer / 5.0f) * PI * 0.5f), 0.5f);
+                        
+                        
                         for (int p = 0; p < PARTICLE_COUNT; p++) {
                             float dist;
                             Vector2 repelDir = GetToroidalDirection(game->enemies[i].position,
@@ -400,7 +413,8 @@ void UpdateGame(Game* game) {
                                 // 70% chance to repel each particle when storm is active
                                 if (GetRandomValue(1, 10) <= 7) {
                                     // repelDir is already enemy->particle direction, so use it directly for repulsion
-                                    float repelForce = (1.0f - dist / SEMI_STORM_RADIUS) * SEMI_STORM_FORCE;
+                                    float distanceFactor = 1.0f - (dist / SEMI_STORM_RADIUS);
+                                    float repelForce = distanceFactor * SEMI_STORM_FORCE * stormStrength;
                                     game->particles[p].velocity.x += repelDir.x * repelForce;
                                     game->particles[p].velocity.y += repelDir.y * repelForce;
                                 }
