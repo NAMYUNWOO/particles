@@ -163,6 +163,9 @@ void UpdateGame(Game* game) {
                 game->particles[i] = InitParticle(game->screenWidth, game->screenHeight);
             }
             
+            // Reset spawn timing for new game
+            ResetSpawnTiming();
+            
             // set first stage (starts from 1) - Blackhole stage
             LoadStage(game, 1);
             
@@ -1013,6 +1016,15 @@ void UpdateStageSystem(Game* game) {
         SpawnEnemyFromStage(game);
     }
     
+    // Debug: Print spawn info every 2 seconds
+    static float lastDebugPrint = 0;
+    if (game->stageTimer - lastDebugPrint > 2.0f) {
+        printf("DEBUG: Stage %d, Timer: %.1f, Enemies: %d, State: %d, Wave: %d\n", 
+               game->currentStageNumber, game->stageTimer, game->enemyCount, 
+               game->currentStage.state, game->currentStage.currentWave);
+        lastDebugPrint = game->stageTimer;
+    }
+    
     // Check stage completion
     CheckStageCompletion(game);
 }
@@ -1021,6 +1033,7 @@ void UpdateStageSystem(Game* game) {
 void SpawnEnemyFromStage(Game* game) {
     EnemyType type = GetNextEnemyType(&game->currentStage);
     Vector2 spawnPos = GetEnemySpawnPosition(&game->currentStage, game->screenWidth, game->screenHeight);
+    
     
     // Create enemy with stage modifiers
     Enemy newEnemy = InitEnemyByType(type, game->screenWidth, game->screenHeight, game->player.position);

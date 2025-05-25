@@ -90,4 +90,7 @@ void DrawStageComplete(Stage* stage, int screenWidth, int screenHeight);
 void StartNextWave(Stage* stage);
 bool IsWaveComplete(Stage* stage);
 
+// Reset function for static variables
+void ResetSpawnTiming(void);
+
 #endif // STAGE_MANAGER_H 

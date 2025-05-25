@@ -514,6 +514,16 @@ void UpdateStage(Stage* stage, float deltaTime) {
 }
 
 // Check if enemy should spawn
+// Static variables for spawn timing
+static float g_lastSpawnTime = -999.0f;
+static int g_lastStageNumber = -1;
+
+// Reset spawn timing (call this when starting a new game)
+void ResetSpawnTiming(void) {
+    g_lastSpawnTime = -999.0f;
+    g_lastStageNumber = -1;
+}
+
 bool ShouldSpawnEnemy(Stage* stage, float currentTime) {
     if (stage->state != STAGE_STATE_ACTIVE) return false;
     if (stage->currentWave >= stage->waveCount) return false;
@@ -534,17 +544,14 @@ bool ShouldSpawnEnemy(Stage* stage, float currentTime) {
     int enemiesInCurrentWave = stage->totalEnemiesSpawned - spawnedInWave;
     if (enemiesInCurrentWave >= wave->enemyCount) return false;
     
-    // Check spawn delay - Reset static variable for new stages
-    static float lastSpawnTime = -999.0f;  // Initialize to old time
-    static int lastStageNumber = -1;
-    
-    if (lastStageNumber != stage->stageNumber) {
-        lastSpawnTime = -999.0f;  // Reset for new stage
-        lastStageNumber = stage->stageNumber;
+    // Reset spawn time when stage changes or when it's the first spawn of a new stage
+    if (g_lastStageNumber != stage->stageNumber || stage->totalEnemiesSpawned == 0) {
+        g_lastSpawnTime = currentTime - wave->spawnDelay - 1.0f;  // Ensure immediate spawn
+        g_lastStageNumber = stage->stageNumber;
     }
     
-    if (currentTime - lastSpawnTime >= wave->spawnDelay) {
-        lastSpawnTime = currentTime;
+    if (currentTime - g_lastSpawnTime >= wave->spawnDelay) {
+        g_lastSpawnTime = currentTime;
         return true;
     }
     
