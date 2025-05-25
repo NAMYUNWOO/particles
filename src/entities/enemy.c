@@ -150,6 +150,9 @@ Enemy InitEnemyByType(EnemyType type, int screenWidth, int screenHeight, Vector2
             enemy.hasPulsed = false;  // Hasn't pulsed yet
             enemy.transformTimer = 0.0f;  // No transformation timer yet
             enemy.stormCycleTimer = 0.0f;  // Storm cycle timer
+            // Blackhole moves faster than normal enemies
+            // enemy.velocity.x *= 2.0f;
+            // enemy.velocity.y *= 2.0f;
             break;
             
         case ENEMY_TYPE_COUNT:

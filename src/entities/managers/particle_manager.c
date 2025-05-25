@@ -5,10 +5,18 @@
 
 void UpdateAllParticles(Game* game, bool isSpacePressed) {
     for (int i = 0; i < PARTICLE_COUNT; i++) {
+        // 플레이어 중심 위치 계산
+        Vector2 playerCenter = {
+            game->player.position.x + game->player.size/2,
+            game->player.position.y + game->player.size/2
+        };
+        
         if (isSpacePressed) {
-            AttractParticle(&game->particles[i], game->player.position, BOOSTED_ATTRACTION_FORCE);
+            AttractParticleToroidal(&game->particles[i], playerCenter, BOOSTED_ATTRACTION_FORCE, 
+                                   game->screenWidth, game->screenHeight);
         } else {
-            AttractParticle(&game->particles[i], game->player.position, DEFAULT_ATTRACTION_FORCE);
+            AttractParticleToroidal(&game->particles[i], playerCenter, DEFAULT_ATTRACTION_FORCE,
+                                   game->screenWidth, game->screenHeight);
         }
         
         // 마찰 적용 (0.99 = 약간의 감속)
