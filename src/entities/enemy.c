@@ -139,6 +139,19 @@ Enemy InitEnemyByType(EnemyType type, int screenWidth, int screenHeight, Vector2
             enemy.phase = 0;
             break;
             
+        case ENEMY_TYPE_BLACKHOLE:
+            enemy.radius = 40.0f;
+            enemy.maxHealth = 1000.0f;
+            enemy.color = (Color){50, 0, 100, 255};  // Deep purple
+            enemy.movePattern = MOVE_PATTERN_TRACKING;  // Always tracks the player
+            enemy.damage = 30.0f;
+            enemy.isInvulnerable = true;  // Invulnerable until all other enemies are dead
+            enemy.aiState = AI_STATE_CHASE;  // Always chasing player
+            enemy.hasPulsed = false;  // Hasn't pulsed yet
+            enemy.transformTimer = 0.0f;  // No transformation timer yet
+            enemy.stormCycleTimer = 0.0f;  // Storm cycle timer
+            break;
+            
         case ENEMY_TYPE_COUNT:
             // This shouldn't happen - fallback to basic
             return InitEnemyByType(ENEMY_TYPE_BASIC, screenWidth, screenHeight, playerPos);
@@ -379,6 +392,22 @@ void ExecuteEnemySpecialAbility(Enemy* enemy, Vector2 playerPos) {
             }
             break;
             
+        case ENEMY_TYPE_BLACKHOLE:
+            // Blackhole pulse effect
+            if (enemy->aiState == AI_STATE_SPECIAL) {
+                // Increase size during pulse
+                enemy->radius = enemy->radius * 1.1f;
+                if (enemy->radius > 60.0f) {
+                    enemy->radius = 40.0f;  // Reset to normal size
+                }
+                // Darker color during pulse
+                enemy->color = (Color){20, 0, 50, 255};
+            } else {
+                enemy->radius = 40.0f;  // Normal size
+                enemy->color = enemy->originalColor;
+            }
+            break;
+            
         // These enemy types don't have special abilities
         case ENEMY_TYPE_BASIC:
         case ENEMY_TYPE_TRACKER:
@@ -475,7 +504,87 @@ void DrawEnemy(Enemy enemy) {
         }
     }
     
-    DrawCircle(enemy.position.x, enemy.position.y, enemy.radius, c);
+    // Special rendering for blackhole enemy
+    if (enemy.type == ENEMY_TYPE_BLACKHOLE) {
+        if (enemy.isInvulnerable && !enemy.hasPulsed) {
+            // Draw gravitational rings when invulnerable
+            for (int i = 3; i >= 0; i--) {
+                float ringRadius = enemy.radius * (2.0f + i * 0.5f);
+                Color ringColor = (Color){c.r, c.g, c.b, (unsigned char)(30 - i * 7)};
+                DrawCircleLines(enemy.position.x, enemy.position.y, ringRadius, ringColor);
+            }
+            // Draw invulnerability shield effect
+            DrawCircleLines(enemy.position.x, enemy.position.y, enemy.radius + 5, 
+                          (Color){100, 100, 255, 100});
+            // Draw dark core
+            DrawCircle(enemy.position.x, enemy.position.y, enemy.radius, BLACK);
+            DrawCircle(enemy.position.x, enemy.position.y, enemy.radius * 0.8f, c);
+        } else if (enemy.hasPulsed) {
+            // After transformation - semi-magnetic storm with fast movement
+            DrawCircle(enemy.position.x, enemy.position.y, enemy.radius, c);
+            
+            // Check if storm is active based on cycle timer
+            bool stormActive = fmodf(enemy.stormCycleTimer, 10.0f) < 5.0f;
+            
+            // Draw storm field based on state
+            if (stormActive) {
+                // Draw active storm rings (red)
+                float stormTime = GetTime() * 4.0f;
+                for (int i = 0; i < 3; i++) {
+                    float ringRadius = 150.0f - i * 40.0f; // Match SEMI_STORM_RADIUS
+                    float waveOffset = sinf(stormTime + i * 1.5f) * 8.0f;
+                    unsigned char alpha = (unsigned char)(60 - i * 15);
+                    DrawCircleLines(enemy.position.x, enemy.position.y, ringRadius + waveOffset, 
+                                  (Color){255, 50, 50, alpha});
+                }
+                // Draw warning circle
+                DrawCircleLines(enemy.position.x, enemy.position.y, enemy.radius + 5, 
+                              (Color){255, 100, 100, 150});
+            } else {
+                // Draw vulnerable state (green glow)
+                DrawCircleLines(enemy.position.x, enemy.position.y, enemy.radius + 5, 
+                              (Color){100, 255, 100, 100});
+                // Pulsing effect to indicate vulnerability
+                float pulse = sinf(GetTime() * 5.0f) * 10.0f + 60.0f;
+                DrawCircleLines(enemy.position.x, enemy.position.y, pulse, 
+                              (Color){100, 255, 100, 50});
+            }
+            
+            // Draw speed lines
+            Vector2 vel = enemy.velocity;
+            float speed = sqrtf(vel.x * vel.x + vel.y * vel.y);
+            if (speed > 0.1f) {
+                Vector2 norm = (Vector2){-vel.x / speed, -vel.y / speed};
+                for (int i = 0; i < 3; i++) {
+                    float offset = i * 10.0f;
+                    DrawLine(enemy.position.x + norm.x * offset, 
+                           enemy.position.y + norm.y * offset,
+                           enemy.position.x + norm.x * (offset + 5),
+                           enemy.position.y + norm.y * (offset + 5),
+                           (Color){c.r, c.g, c.b, (unsigned char)(100 - i * 30)});
+                }
+            }
+        } else {
+            // When vulnerable, draw as a fast-moving enemy
+            DrawCircle(enemy.position.x, enemy.position.y, enemy.radius, c);
+            // Draw speed lines
+            Vector2 vel = enemy.velocity;
+            float speed = sqrtf(vel.x * vel.x + vel.y * vel.y);
+            if (speed > 0.1f) {
+                Vector2 norm = (Vector2){-vel.x / speed, -vel.y / speed};
+                for (int i = 0; i < 3; i++) {
+                    float offset = i * 10.0f;
+                    DrawLine(enemy.position.x + norm.x * offset, 
+                           enemy.position.y + norm.y * offset,
+                           enemy.position.x + norm.x * (offset + 5),
+                           enemy.position.y + norm.y * (offset + 5),
+                           (Color){c.r, c.g, c.b, (unsigned char)(100 - i * 30)});
+                }
+            }
+        }
+    } else {
+        DrawCircle(enemy.position.x, enemy.position.y, enemy.radius, c);
+    }
     
     // Draw type indicator for special enemies
     if (enemy.type != ENEMY_TYPE_BASIC) {
@@ -490,6 +599,7 @@ void DrawEnemy(Enemy enemy) {
             case ENEMY_TYPE_CLUSTER: typeChar = "C"; break;
             case ENEMY_TYPE_BOSS_1: typeChar = "B1"; break;
             case ENEMY_TYPE_BOSS_FINAL: typeChar = "BF"; break;
+            case ENEMY_TYPE_BLACKHOLE: typeChar = "BH"; break;
             default: break;
         }
         

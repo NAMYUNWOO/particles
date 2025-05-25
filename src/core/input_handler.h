@@ -9,4 +9,7 @@ void InitInputHandler(Game* game);
 // 입력 상태 업데이트 및 이벤트 발행
 void ProcessInputEvents(void);
 
+// 입력 핸들러 정리
+void CleanupInputHandler(void);
+
 #endif // INPUT_HANDLER_H 

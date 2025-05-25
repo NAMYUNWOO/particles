@@ -16,6 +16,7 @@ typedef enum {
     ENEMY_TYPE_REPULSOR,       // Stage 8: Pushes particles away
     ENEMY_TYPE_CLUSTER,        // Stage 9: Explodes in chain reaction
     ENEMY_TYPE_BOSS_FINAL,     // Stage 10: Final boss
+    ENEMY_TYPE_BLACKHOLE,      // New: Attracts particles with strong gravity
     ENEMY_TYPE_COUNT
 } EnemyType;
 
@@ -75,6 +76,11 @@ typedef struct Enemy {
     int phase;                // Boss phase
     float phaseTimer;         // Timer for phase changes
     bool isInvulnerable;      // Invulnerability during phase change
+    
+    // Blackhole-specific data
+    bool hasPulsed;           // Whether the blackhole has done its one-time pulse
+    float transformTimer;     // Timer for transformation after pulse
+    float stormCycleTimer;    // Timer for magnetic storm on/off cycle
 } Enemy;
 
 // Constants

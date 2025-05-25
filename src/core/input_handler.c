@@ -1,9 +1,14 @@
 #include "input_handler.h"
 #include "event/event_system.h"
 #include "event/event_types.h"
+#include "memory_pool.h"
 #include "raylib.h"
 #include <stdlib.h>
 #include <stdio.h>
+
+// 키 이벤트 메모리 풀
+static MemoryPool g_keyEventPool;
+static bool g_keyEventPoolInitialized = false;
 
 // 방향키 목록
 static const int DIRECTION_KEYS[] = { KEY_W, KEY_A, KEY_S, KEY_D, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT };
@@ -48,14 +53,20 @@ static void HandleActionInput(const Event* event, void* context) {
 
 // 키보드 입력 이벤트를 처리한 후 메모리 해제하는 핸들러
 static void CleanupEventData(const Event* event, void* context) {
-    // 이벤트 데이터가 있으면 해제
+    // 이벤트 데이터가 있으면 메모리 풀로 반환
     if (event->data) {
-        free(event->data);
+        MemoryPool_Free(&g_keyEventPool, event->data);
     }
 }
 
 // 이벤트 리스너 등록
 void InitInputHandler(Game* game) {
+    // 키 이벤트 메모리 풀 초기화 (한 번만)
+    if (!g_keyEventPoolInitialized) {
+        MemoryPool_Init(&g_keyEventPool, sizeof(KeyEventData), 64);
+        g_keyEventPoolInitialized = true;
+    }
+    
     // 입력 이벤트 핸들러 등록
     SubscribeToEvent(EVENT_KEY_PRESSED, HandlePlayerMovementInput, game);
     SubscribeToEvent(EVENT_KEY_PRESSED, HandleActionInput, game);
@@ -73,16 +84,20 @@ void ProcessInputEvents(void) {
     for (int i = 0; i < DIRECTION_KEY_COUNT; i++) {
         int key = DIRECTION_KEYS[i];
         if (IsKeyPressed(key)) {
-            KeyEventData* keyData = (KeyEventData*)malloc(sizeof(KeyEventData));
-            keyData->keyCode = key;
-            keyData->isPressed = true;
-            PublishEvent(EVENT_KEY_PRESSED, keyData);
+            KeyEventData* keyData = (KeyEventData*)MemoryPool_Alloc(&g_keyEventPool);
+            if (keyData) {
+                keyData->keyCode = key;
+                keyData->isPressed = true;
+                PublishEvent(EVENT_KEY_PRESSED, keyData);
+            }
         }
         else if (IsKeyReleased(key)) {
-            KeyEventData* keyData = (KeyEventData*)malloc(sizeof(KeyEventData));
-            keyData->keyCode = key;
-            keyData->isPressed = false;
-            PublishEvent(EVENT_KEY_RELEASED, keyData);
+            KeyEventData* keyData = (KeyEventData*)MemoryPool_Alloc(&g_keyEventPool);
+            if (keyData) {
+                keyData->keyCode = key;
+                keyData->isPressed = false;
+                PublishEvent(EVENT_KEY_RELEASED, keyData);
+            }
         }
     }
     
@@ -90,16 +105,28 @@ void ProcessInputEvents(void) {
     for (int i = 0; i < ACTION_KEY_COUNT; i++) {
         int key = ACTION_KEYS[i];
         if (IsKeyPressed(key)) {
-            KeyEventData* keyData = (KeyEventData*)malloc(sizeof(KeyEventData));
-            keyData->keyCode = key;
-            keyData->isPressed = true;
-            PublishEvent(EVENT_KEY_PRESSED, keyData);
+            KeyEventData* keyData = (KeyEventData*)MemoryPool_Alloc(&g_keyEventPool);
+            if (keyData) {
+                keyData->keyCode = key;
+                keyData->isPressed = true;
+                PublishEvent(EVENT_KEY_PRESSED, keyData);
+            }
         }
         else if (IsKeyReleased(key)) {
-            KeyEventData* keyData = (KeyEventData*)malloc(sizeof(KeyEventData));
-            keyData->keyCode = key;
-            keyData->isPressed = false;
-            PublishEvent(EVENT_KEY_RELEASED, keyData);
+            KeyEventData* keyData = (KeyEventData*)MemoryPool_Alloc(&g_keyEventPool);
+            if (keyData) {
+                keyData->keyCode = key;
+                keyData->isPressed = false;
+                PublishEvent(EVENT_KEY_RELEASED, keyData);
+            }
         }
+    }
+}
+
+// 입력 핸들러 정리
+void CleanupInputHandler(void) {
+    if (g_keyEventPoolInitialized) {
+        MemoryPool_Destroy(&g_keyEventPool);
+        g_keyEventPoolInitialized = false;
     }
 }

@@ -21,6 +21,12 @@ extern MemoryPool g_enemyHealthEventPool;
 extern MemoryPool g_gameStateEventPool;
 extern MemoryPool g_enemyStateEventPool;
 
+// 추가 메모리 풀 정의
+static MemoryPool g_stageChangeEventPool;
+static MemoryPool g_specialAbilityEventPool;
+static MemoryPool g_particleEffectEventPool;
+static bool g_additionalPoolsInitialized = false;
+
 // Initialize game state and resources
 Game InitGame(int screenWidth, int screenHeight) {
     // 랜덤 시드 초기화
@@ -31,6 +37,14 @@ Game InitGame(int screenWidth, int screenHeight) {
     
     // 물리 시스템 메모리 풀 초기화
     InitPhysicsMemoryPools();
+    
+    // 추가 메모리 풀 초기화 (한 번만)
+    if (!g_additionalPoolsInitialized) {
+        MemoryPool_Init(&g_stageChangeEventPool, sizeof(StageChangeEventData), 32);
+        MemoryPool_Init(&g_specialAbilityEventPool, sizeof(SpecialAbilityEventData), 32);
+        MemoryPool_Init(&g_particleEffectEventPool, sizeof(ParticleEffectEventData), 32);
+        g_additionalPoolsInitialized = true;
+    }
     
     Game game = {
         .screenWidth = screenWidth,
@@ -149,18 +163,20 @@ void UpdateGame(Game* game) {
                 game->particles[i] = InitParticle(game->screenWidth, game->screenHeight);
             }
             
-            // set first stage (starts from 1) 
-            LoadStage(game, 2);
+            // set first stage (starts from 1) - Blackhole stage
+            LoadStage(game, 1);
             
             // 게임 상태 직접 설정 (LoadStage에서도 설정하지만 명시적으로)
             game->gameState = GAME_STATE_STAGE_INTRO;
             
             // 선택적: 상태 변경 이벤트 발행
             if (game->useEventSystem) {
-                GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
-                stateData->oldState = GAME_STATE_TUTORIAL;
-                stateData->newState = GAME_STATE_STAGE_INTRO;
-                PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
+                GameStateEventData* stateData = MemoryPool_Alloc(&g_gameStateEventPool);
+                if (stateData) {
+                    stateData->oldState = GAME_STATE_TUTORIAL;
+                    stateData->newState = GAME_STATE_STAGE_INTRO;
+                    PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
+                }
             }
         }
         return;
@@ -216,10 +232,12 @@ void UpdateGame(Game* game) {
             game->nameLength = 0;
             
             // 게임 상태 변경 이벤트 발행
-            GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
-            stateData->oldState = GAME_STATE_OVER;
-            stateData->newState = GAME_STATE_SCORE_ENTRY;
-            PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
+            GameStateEventData* stateData = MemoryPool_Alloc(&g_gameStateEventPool);
+            if (stateData) {
+                stateData->oldState = GAME_STATE_OVER;
+                stateData->newState = GAME_STATE_SCORE_ENTRY;
+                PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
+            }
         }
         return;
     }
@@ -246,10 +264,12 @@ void UpdateGame(Game* game) {
             
             // 선택적: 상태 변경 이벤트 발행
             if (game->useEventSystem) {
-                GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
-                stateData->oldState = GAME_STATE_SCORE_ENTRY;
-                stateData->newState = GAME_STATE_TUTORIAL;
-                PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
+                GameStateEventData* stateData = MemoryPool_Alloc(&g_gameStateEventPool);
+                if (stateData) {
+                    stateData->oldState = GAME_STATE_SCORE_ENTRY;
+                    stateData->newState = GAME_STATE_TUTORIAL;
+                    PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
+                }
             }
         }
         return;
@@ -277,7 +297,7 @@ void UpdateGame(Game* game) {
             UpdateEnemyMovement(&game->enemies[i], game->player.position, game->deltaTime);
             UpdateEnemy(&game->enemies[i], game->screenWidth, game->screenHeight, game->deltaTime);
             
-            // Apply repulsion fields
+            // Apply special field effects
             if (game->enemies[i].type == ENEMY_TYPE_REPULSOR) {
                 // Apply repulsion to nearby particles
                 for (int p = 0; p < PARTICLE_COUNT; p++) {
@@ -288,6 +308,97 @@ void UpdateGame(Game* game) {
                         float repulseForce = (1.0f - dist / REPULSE_RADIUS) * 2.0f;
                         game->particles[p].velocity.x += repulseDir.x * repulseForce;
                         game->particles[p].velocity.y += repulseDir.y * repulseForce;
+                    }
+                }
+            } else if (game->enemies[i].type == ENEMY_TYPE_BLACKHOLE) {
+                // Check if other enemies exist
+                int otherEnemiesCount = 0;
+                for (int j = 0; j < game->enemyCount; j++) {
+                    if (j != i && game->enemies[j].health > 0) {
+                        otherEnemiesCount++;
+                    }
+                }
+                
+                // Update blackhole state based on other enemies
+                if (otherEnemiesCount == 0 && game->enemies[i].isInvulnerable && !game->enemies[i].hasPulsed) {
+                    // All other enemies are dead, perform pulse and transform immediately
+                    game->enemies[i].hasPulsed = true;
+                    game->enemies[i].isInvulnerable = false;
+                    game->enemies[i].movePattern = MOVE_PATTERN_TRACKING;
+                    game->enemies[i].color = (Color){150, 0, 50, 255};  // Reddish color when active
+                    game->enemies[i].aiState = AI_STATE_CHASE;
+                    // Increase speed
+                    game->enemies[i].velocity.x *= 3.0f;
+                    game->enemies[i].velocity.y *= 3.0f;
+                    
+                    // Create a powerful radial pulse that pushes all particles away
+                    #define PULSE_RADIUS 400.0f
+                    #define PULSE_FORCE 20.0f
+                    for (int p = 0; p < PARTICLE_COUNT; p++) {
+                        float dist = Vector2Distance(game->particles[p].position, game->enemies[i].position);
+                        if (dist < PULSE_RADIUS && dist > 1.0f) {
+                            // Push particles away from blackhole center
+                            Vector2 pulseDir = Vector2Subtract(game->particles[p].position, game->enemies[i].position);
+                            pulseDir = Vector2Normalize(pulseDir);
+                            float pulsePower = (1.0f - dist / PULSE_RADIUS) * PULSE_FORCE;
+                            game->particles[p].velocity.x += pulseDir.x * pulsePower;
+                            game->particles[p].velocity.y += pulseDir.y * pulsePower;
+                        }
+                    }
+                }
+                
+                // Apply semi-magnetic storm after transformation (cycles every 5 seconds)
+                if (game->enemies[i].hasPulsed && game->enemies[i].type == ENEMY_TYPE_BLACKHOLE) {
+                    // Update storm cycle timer
+                    game->enemies[i].stormCycleTimer += game->deltaTime;
+                    if (game->enemies[i].stormCycleTimer >= 6.0f) {
+                        game->enemies[i].stormCycleTimer = 0.0f;  // Reset every 6 seconds (5 on, 1 off)
+                    }
+                    
+                    // Check if storm is active (first 5 seconds of cycle)
+                    bool stormActive = game->enemies[i].stormCycleTimer < 5.0f;
+                    
+                    // Update color based on storm state
+                    if (stormActive) {
+                        game->enemies[i].color = (Color){150, 0, 50, 255};  // Reddish when storm active
+                    } else {
+                        game->enemies[i].color = (Color){100, 150, 50, 255};  // Greenish when vulnerable
+                    }
+                    
+                    // Apply magnetic storm only when active
+                    if (stormActive) {
+                        #define SEMI_STORM_RADIUS 150.0f
+                        #define SEMI_STORM_FORCE 3.0f
+                        for (int p = 0; p < PARTICLE_COUNT; p++) {
+                            float dist = Vector2Distance(game->particles[p].position, game->enemies[i].position);
+                            if (dist < SEMI_STORM_RADIUS && dist > 1.0f) {
+                                // 70% chance to repel each particle when storm is active
+                                if (GetRandomValue(1, 10) <= 7) {
+                                    Vector2 repelDir = Vector2Subtract(game->particles[p].position, game->enemies[i].position);
+                                    repelDir = Vector2Normalize(repelDir);
+                                    float repelForce = (1.0f - dist / SEMI_STORM_RADIUS) * SEMI_STORM_FORCE;
+                                    game->particles[p].velocity.x += repelDir.x * repelForce;
+                                    game->particles[p].velocity.y += repelDir.y * repelForce;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Only apply gravity if still has invulnerability and hasn't pulsed yet
+                if (game->enemies[i].isInvulnerable && !game->enemies[i].hasPulsed) {
+                    // Apply strong attraction to nearby particles
+                    #define BLACKHOLE_RADIUS 200.0f
+                    #define BLACKHOLE_FORCE 5.0f
+                    for (int p = 0; p < PARTICLE_COUNT; p++) {
+                        float dist = Vector2Distance(game->particles[p].position, game->enemies[i].position);
+                        if (dist < BLACKHOLE_RADIUS && dist > game->enemies[i].radius) {
+                            Vector2 attractDir = Vector2Subtract(game->enemies[i].position, game->particles[p].position);
+                            attractDir = Vector2Normalize(attractDir);
+                            float attractForce = (1.0f - dist / BLACKHOLE_RADIUS) * BLACKHOLE_FORCE;
+                            game->particles[p].velocity.x += attractDir.x * attractForce;
+                            game->particles[p].velocity.y += attractDir.y * attractForce;
+                        }
                     }
                 }
             }
@@ -575,6 +686,14 @@ void CleanupGame(Game* game) {
     // 물리 시스템 메모리 풀 정리
     CleanupPhysicsMemoryPools();
     
+    // 추가 메모리 풀 정리
+    if (g_additionalPoolsInitialized) {
+        MemoryPool_Destroy(&g_stageChangeEventPool);
+        MemoryPool_Destroy(&g_specialAbilityEventPool);
+        MemoryPool_Destroy(&g_particleEffectEventPool);
+        g_additionalPoolsInitialized = false;
+    }
+    
     // 이벤트 시스템 정리
     CleanupEventSystem();
 }
@@ -727,11 +846,13 @@ static void OnPlayerEnemyCollision(const Event* event, void* context) {
         // 게임 오버 상태로 전환
         game->gameState = GAME_STATE_OVER;
         
-        // 게임 상태 변경 이벤트 발행 (나중에 메모리 풀로 교체)
-        GameStateEventData* stateData = malloc(sizeof(GameStateEventData));
-        stateData->oldState = GAME_STATE_PLAYING;
-        stateData->newState = GAME_STATE_OVER;
-        PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
+        // 게임 상태 변경 이벤트 발행
+        GameStateEventData* stateData = MemoryPool_Alloc(&g_gameStateEventPool);
+        if (stateData) {
+            stateData->oldState = GAME_STATE_PLAYING;
+            stateData->newState = GAME_STATE_OVER;
+            PublishEvent(EVENT_GAME_STATE_CHANGED, stateData);
+        }
     }
     
     // 메모리 풀 체크 후 반환
@@ -836,13 +957,20 @@ void LoadStage(Game* game, int stageNumber) {
         // This would affect particle attraction force
     }
     
+    // Update particle colors to match stage theme
+    for (int i = 0; i < PARTICLE_COUNT; i++) {
+        game->particles[i].color = game->currentStage.particleColor;
+    }
+    
     // Publish stage started event
-    StageChangeEventData* stageData = malloc(sizeof(StageChangeEventData));
-    stageData->oldStageNumber = stageNumber - 1;
-    stageData->newStageNumber = stageNumber;
-    stageData->enemiesKilled = game->totalEnemiesKilled;
-    stageData->score = game->score;
-    PublishEvent(EVENT_STAGE_STARTED, stageData);
+    StageChangeEventData* stageData = MemoryPool_Alloc(&g_stageChangeEventPool);
+    if (stageData) {
+        stageData->oldStageNumber = stageNumber - 1;
+        stageData->newStageNumber = stageNumber;
+        stageData->enemiesKilled = game->totalEnemiesKilled;
+        stageData->score = game->score;
+        PublishEvent(EVENT_STAGE_STARTED, stageData);
+    }
     
     // Set appropriate game state
     if (stageNumber == 6 || stageNumber == 10) {
@@ -962,12 +1090,14 @@ void HandleEnemySplit(Game* game, Enemy* originalEnemy) {
         game->enemies[game->enemyCount++] = splitEnemy;
         
         // Publish split event
-        SpecialAbilityEventData* data = malloc(sizeof(SpecialAbilityEventData));
-        data->enemyIndex = game->enemyCount - 1;
-        data->enemyPtr = &game->enemies[game->enemyCount - 1];
-        data->abilityType = 1; // Split
-        data->position = splitEnemy.position;
-        PublishEvent(EVENT_ENEMY_SPLIT, data);
+        SpecialAbilityEventData* data = MemoryPool_Alloc(&g_specialAbilityEventPool);
+        if (data) {
+            data->enemyIndex = game->enemyCount - 1;
+            data->enemyPtr = &game->enemies[game->enemyCount - 1];
+            data->abilityType = 1; // Split
+            data->position = splitEnemy.position;
+            PublishEvent(EVENT_ENEMY_SPLIT, data);
+        }
     }
 }
 
@@ -993,12 +1123,14 @@ void HandleClusterExplosion(Game* game, Enemy* clusterEnemy) {
     }
     
     // Create explosion effect
-    ParticleEffectEventData* effectData = malloc(sizeof(ParticleEffectEventData));
-    effectData->position = clusterEnemy->position;
-    effectData->effectType = 0; // Explosion
-    effectData->radius = CLUSTER_EXPLOSION_RADIUS;
-    effectData->color = MAGENTA;
-    PublishEvent(EVENT_PARTICLE_EFFECT, effectData);
+    ParticleEffectEventData* effectData = MemoryPool_Alloc(&g_particleEffectEventPool);
+    if (effectData) {
+        effectData->position = clusterEnemy->position;
+        effectData->effectType = 0; // Explosion
+        effectData->radius = CLUSTER_EXPLOSION_RADIUS;
+        effectData->color = MAGENTA;
+        PublishEvent(EVENT_PARTICLE_EFFECT, effectData);
+    }
 }
 
 // Check stage completion
@@ -1013,12 +1145,14 @@ void CheckStageCompletion(Game* game) {
         game->gameState = GAME_STATE_STAGE_COMPLETE;
         
         // Publish stage complete event
-        StageChangeEventData* data = malloc(sizeof(StageChangeEventData));
-        data->oldStageNumber = game->currentStageNumber;
-        data->newStageNumber = game->currentStageNumber + 1;
-        data->enemiesKilled = game->enemiesKilledThisStage;
-        data->score = game->score;
-        PublishEvent(EVENT_STAGE_COMPLETED, data);
+        StageChangeEventData* data = MemoryPool_Alloc(&g_stageChangeEventPool);
+        if (data) {
+            data->oldStageNumber = game->currentStageNumber;
+            data->newStageNumber = game->currentStageNumber + 1;
+            data->enemiesKilled = game->enemiesKilledThisStage;
+            data->score = game->score;
+            PublishEvent(EVENT_STAGE_COMPLETED, data);
+        }
         
         // Bonus score for stage completion
         game->score += 500 * game->currentStageNumber;

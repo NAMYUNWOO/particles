@@ -58,6 +58,11 @@ int main(void)
         PublishEvent(EVENT_FRAME_END, NULL);
     }
 
+    // 입력 핸들러 정리
+    if (game.useEventSystem) {
+        CleanupInputHandler();
+    }
+    
     // 이벤트 시스템 정리
     CleanupEventSystem();
     CleanupGame(&game);

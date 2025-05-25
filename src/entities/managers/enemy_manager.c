@@ -115,6 +115,14 @@ void UpdateAllEnemies(Game* game) {
                     ChangeEnemyAIState(enemy, AI_STATE_PATROL);
                 }
                 break;
+            case ENEMY_TYPE_BLACKHOLE:
+                // Blackholes slowly drift and occasionally pulse
+                if ((int)(GetTime() * 0.3f) % 3 == 0) {
+                    ChangeEnemyAIState(enemy, AI_STATE_SPECIAL);  // Pulse phase
+                } else {
+                    ChangeEnemyAIState(enemy, AI_STATE_PATROL);   // Slow drift
+                }
+                break;
             case ENEMY_TYPE_BASIC:
             case ENEMY_TYPE_SPEEDY:
             case ENEMY_TYPE_SPLITTER:

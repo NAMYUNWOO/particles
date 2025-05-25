@@ -2,37 +2,46 @@
 #include <string.h>
 #include <stdio.h>
 
-// Stage 1: Tutorial - Basic enemies
+// Stage 1: Blackhole Enemy Introduction
 Stage CreateStage1(void) {
     Stage stage = {0};
     stage.stageNumber = 1;
-    strcpy(stage.name, "Welcome to the Particle Storm");
-    strcpy(stage.description, "Learn the basics - Destroy simple enemies");
+    strcpy(stage.name, "Gravitational Anomaly");
+    strcpy(stage.description, "Use gravity against enemies - Blackhole awakens when alone!");
     
-    // Single wave with basic enemies
-    stage.waveCount = 2;
+    // Introduce blackhole enemy with some basic enemies
+    stage.waveCount = 3;
     stage.waves[0] = (EnemyWave){
         .spawnTime = 0.0f,
-        .enemyCount = 3,
-        .enemyTypes = {ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC},
-        .spawnDelay = 2.0f,
+        .enemyCount = 5,
+        .enemyTypes = {ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC},
+        .spawnDelay = 1.0f,
         .useRandomSpawn = true
     };
     stage.waves[1] = (EnemyWave){
-        .spawnTime = 10.0f,
-        .enemyCount = 5,
-        .enemyTypes = {ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC, ENEMY_TYPE_BASIC},
-        .spawnDelay = 1.5f,
+        .spawnTime = 8.0f,
+        .enemyCount = 1,
+        .enemyTypes = {ENEMY_TYPE_BLACKHOLE},
+        .spawnDelay = 0.0f,
+        .useRandomSpawn = false,
+        .spawnPattern = {{400, 200}}  // Center-top position
+    };
+    stage.waves[2] = (EnemyWave){
+        .spawnTime = 15.0f,
+        .enemyCount = 3,
+        .enemyTypes = {ENEMY_TYPE_BASIC, ENEMY_TYPE_TRACKER, ENEMY_TYPE_BASIC},
+        .spawnDelay = 2.0f,
         .useRandomSpawn = true
     };
     
-    stage.targetKills = 8;
-    stage.maxEnemiesAlive = 4;
-    stage.enemyHealthMultiplier = 1.0f;
-    stage.enemySpeedMultiplier = 1.0f;
-    stage.enemySizeMultiplier = 1.0f;
-    stage.backgroundColor = RAYWHITE;
-    stage.particleColor = BLACK;
+    stage.targetKills = 9;
+    stage.maxEnemiesAlive = 5;
+    stage.enemyHealthMultiplier = 1.2f;  // Blackholes are slightly tougher
+    stage.enemySpeedMultiplier = 0.8f;   // Blackholes move slower
+    stage.enemySizeMultiplier = 1.3f;    // Blackholes are larger
+    stage.backgroundColor = (Color){20, 20, 30, 255};  // Dark space background
+    stage.particleColor = (Color){200, 200, 255, 255}; // Light blue particles
+    stage.particleAttractionMultiplier = 1.5f;  // Stronger particle attraction
     
     return stage;
 }
