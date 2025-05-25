@@ -261,6 +261,8 @@ void UpdateGame(Game* game) {
             
             // 단순히 상태만 TUTORIAL로 변경 (리소스 리셋은 TUTORIAL → PLAYING 전환 시 수행)
             game->gameState = GAME_STATE_TUTORIAL;
+            // Reset stage number to ensure proper enemy spawning on restart
+            game->currentStageNumber = 0;
             
             // 선택적: 상태 변경 이벤트 발행
             if (game->useEventSystem) {
