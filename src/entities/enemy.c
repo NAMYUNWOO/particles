@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "raymath.h"
+#include "../core/game.h"  // For global screen dimensions
 
 static float LerpFloat(float a, float b, float t);
 
@@ -32,10 +33,20 @@ Enemy InitEnemyByType(EnemyType type, int screenWidth, int screenHeight, Vector2
             enemy.movePattern = MOVE_PATTERN_RANDOM;
             enemy.aiState = AI_STATE_PATROL;
             enemy.color = PURPLE;
+            // Start with a random initial velocity
+            float initialSpeed = 1.0f;
+            float initialAngle = GetRandomValue(0, 360) * DEG2RAD;
             enemy.velocity = (Vector2){
-                GetRandomValue(-50, 50) / 50.0f,
-                GetRandomValue(-50, 50) / 50.0f
+                cosf(initialAngle) * initialSpeed,
+                sinf(initialAngle) * initialSpeed
             };
+            // Initialize wander target ahead of current position
+            enemy.wanderAngle = initialAngle;
+            enemy.wanderTarget = (Vector2){
+                enemy.position.x + cosf(enemy.wanderAngle) * 100.0f,
+                enemy.position.y + sinf(enemy.wanderAngle) * 100.0f
+            };
+            enemy.turnSpeed = 2.0f; // Radians per second
             break;
             
         case ENEMY_TYPE_TRACKER:
@@ -184,16 +195,123 @@ void UpdateEnemyAI(Enemy* enemy, Vector2 playerPos, float deltaTime) {
             break;
             
         case AI_STATE_PATROL:
-            // Change direction occasionally
-            if (enemy->patternTimer > 2.0f + GetRandomValue(0, 20) / 10.0f) {
-                enemy->patternTimer = 0.0f;
-                enemy->velocity.x = GetRandomValue(-100, 100) / 100.0f;
-                enemy->velocity.y = GetRandomValue(-100, 100) / 100.0f;
+            if (enemy->type == ENEMY_TYPE_BASIC) {
+                // Smooth wandering behavior for basic enemies with border avoidance
                 
-                // Speed modifier based on type
-                if (enemy->type == ENEMY_TYPE_SPEEDY) {
-                    enemy->velocity.x *= SPEEDY_SPEED_MULT;
-                    enemy->velocity.y *= SPEEDY_SPEED_MULT;
+                // Update wander angle with small random changes for natural movement
+                enemy->wanderAngle += (GetRandomValue(-100, 100) / 100.0f) * deltaTime * 3.0f; // More variation
+                
+                // Occasionally make bigger turns for exploration
+                if (GetRandomValue(0, 100) < 2) { // 2% chance per frame
+                    enemy->wanderAngle += GetRandomValue(-314, 314) / 100.0f; // -PI to PI
+                }
+                
+                // Calculate new wander target position (project forward from current position)
+                float wanderDistance = 60.0f;
+                float wanderRadius = 40.0f; // Increased for more variation
+                
+                // Get current direction
+                float currentAngle = atan2f(enemy->velocity.y, enemy->velocity.x);
+                
+                // Project a point ahead of the enemy
+                Vector2 wanderCenter = {
+                    enemy->position.x + cosf(currentAngle) * wanderDistance,
+                    enemy->position.y + sinf(currentAngle) * wanderDistance
+                };
+                
+                // Add random offset to create the wander target
+                enemy->wanderTarget = (Vector2){
+                    wanderCenter.x + cosf(enemy->wanderAngle) * wanderRadius,
+                    wanderCenter.y + sinf(enemy->wanderAngle) * wanderRadius
+                };
+                
+                // Calculate desired velocity towards wander target
+                Vector2 desired = {
+                    enemy->wanderTarget.x - enemy->position.x,
+                    enemy->wanderTarget.y - enemy->position.y
+                };
+                
+                // Smart border avoidance - only when heading towards border
+                float borderMargin = 30.0f;  // Very close to edge
+                float avoidanceStrength = 1.5f;  // Gentler force
+                
+                // Only apply avoidance if moving towards the border
+                // Left border
+                if (enemy->position.x < borderMargin && enemy->velocity.x < 0) {
+                    float force = (borderMargin - enemy->position.x) / borderMargin;
+                    desired.x += force * avoidanceStrength;
+                }
+                // Right border
+                if (enemy->position.x > g_screenWidth - borderMargin && enemy->velocity.x > 0) {
+                    float force = (enemy->position.x - (g_screenWidth - borderMargin)) / borderMargin;
+                    desired.x -= force * avoidanceStrength;
+                }
+                // Top border
+                if (enemy->position.y < borderMargin && enemy->velocity.y < 0) {
+                    float force = (borderMargin - enemy->position.y) / borderMargin;
+                    desired.y += force * avoidanceStrength;
+                }
+                // Bottom border
+                if (enemy->position.y > g_screenHeight - borderMargin && enemy->velocity.y > 0) {
+                    float force = (enemy->position.y - (g_screenHeight - borderMargin)) / borderMargin;
+                    desired.y -= force * avoidanceStrength;
+                }
+                
+                // If stuck at border for too long, give a stronger push inward
+                float edgeThreshold = 10.0f;
+                bool nearEdge = (enemy->position.x < edgeThreshold || 
+                                enemy->position.x > g_screenWidth - edgeThreshold ||
+                                enemy->position.y < edgeThreshold || 
+                                enemy->position.y > g_screenHeight - edgeThreshold);
+                
+                if (nearEdge && enemy->patternTimer > 2.0f) {
+                    // Force a new direction pointing towards center
+                    float centerX = g_screenWidth / 2.0f;
+                    float centerY = g_screenHeight / 2.0f;
+                    desired.x = (centerX - enemy->position.x) * 0.02f;
+                    desired.y = (centerY - enemy->position.y) * 0.02f;
+                    // Reset timer to prevent constant center-seeking
+                    enemy->patternTimer = 0.0f;
+                }
+                
+                // Normalize and scale to desired speed
+                float dist = sqrtf(desired.x * desired.x + desired.y * desired.y);
+                if (dist > 0) {
+                    float targetSpeed = 1.2f; // Slightly faster base speed
+                    desired.x = (desired.x / dist) * targetSpeed;
+                    desired.y = (desired.y / dist) * targetSpeed;
+                }
+                
+                // Smooth steering - gradually turn towards desired direction
+                float steerStrength = 0.12f; // Slightly more responsive
+                enemy->velocity.x += (desired.x - enemy->velocity.x) * steerStrength;
+                enemy->velocity.y += (desired.y - enemy->velocity.y) * steerStrength;
+                
+                // Maintain speed within limits
+                float currentSpeed = sqrtf(enemy->velocity.x * enemy->velocity.x + enemy->velocity.y * enemy->velocity.y);
+                if (currentSpeed > 0) {
+                    float maxSpeed = 1.5f;
+                    float minSpeed = 0.8f;
+                    if (currentSpeed > maxSpeed) {
+                        enemy->velocity.x = (enemy->velocity.x / currentSpeed) * maxSpeed;
+                        enemy->velocity.y = (enemy->velocity.y / currentSpeed) * maxSpeed;
+                    } else if (currentSpeed < minSpeed) {
+                        enemy->velocity.x = (enemy->velocity.x / currentSpeed) * minSpeed;
+                        enemy->velocity.y = (enemy->velocity.y / currentSpeed) * minSpeed;
+                    }
+                }
+            } else {
+                // Original behavior for other enemy types
+                if (enemy->patternTimer > 2.0f + GetRandomValue(0, 20) / 10.0f) {
+                    enemy->patternTimer = 0.0f;
+                    enemy->velocity.x = GetRandomValue(-100, 100) / 100.0f;
+                    enemy->velocity.y = GetRandomValue(-100, 100) / 100.0f;
+                    
+                    // Speed modifier based on type
+                    if (enemy->type == ENEMY_TYPE_SPEEDY) {
+                        enemy->velocity.x *= SPEEDY_SPEED_MULT;
+                        enemy->velocity.y *= SPEEDY_SPEED_MULT;
+                    }
                 }
             }
             break;
@@ -251,7 +369,7 @@ void UpdateEnemyAI(Enemy* enemy, Vector2 playerPos, float deltaTime) {
 void UpdateEnemyMovement(Enemy* enemy, Vector2 playerPos, float deltaTime) {
     switch (enemy->movePattern) {
         case MOVE_PATTERN_RANDOM:
-            // Already handled in AI update
+            // Already handled in AI update for smooth wandering
             break;
             
         case MOVE_PATTERN_STRAIGHT:
@@ -452,23 +570,40 @@ void UpdateEnemy(Enemy* enemy, int screenWidth, int screenHeight, float deltaTim
         }
     }
 
-    // Screen boundary check
-    float margin = enemy->radius * 0.7f;
-    if (enemy->position.x < -margin) {
-        enemy->position.x = -margin;
-        enemy->velocity.x *= -1;
-    }
-    if (enemy->position.x > screenWidth + margin) {
-        enemy->position.x = screenWidth + margin;
-        enemy->velocity.x *= -1;
-    }
-    if (enemy->position.y < -margin) {
-        enemy->position.y = -margin;
-        enemy->velocity.y *= -1;
-    }
-    if (enemy->position.y > screenHeight + margin) {
-        enemy->position.y = screenHeight + margin;
-        enemy->velocity.y *= -1;
+    // Screen boundary check - softer for ENEMY_TYPE_BASIC
+    if (enemy->type == ENEMY_TYPE_BASIC) {
+        // Allow centers to reach edges for corner accessibility
+        if (enemy->position.x < 0) {
+            enemy->position.x = 0;
+        }
+        if (enemy->position.x > screenWidth) {
+            enemy->position.x = screenWidth;
+        }
+        if (enemy->position.y < 0) {
+            enemy->position.y = 0;
+        }
+        if (enemy->position.y > screenHeight) {
+            enemy->position.y = screenHeight;
+        }
+    } else {
+        // Original hard boundary check for other enemy types
+        float margin = enemy->radius * 0.7f;
+        if (enemy->position.x < -margin) {
+            enemy->position.x = -margin;
+            enemy->velocity.x *= -1;
+        }
+        if (enemy->position.x > screenWidth + margin) {
+            enemy->position.x = screenWidth + margin;
+            enemy->velocity.x *= -1;
+        }
+        if (enemy->position.y < -margin) {
+            enemy->position.y = -margin;
+            enemy->velocity.y *= -1;
+        }
+        if (enemy->position.y > screenHeight + margin) {
+            enemy->position.y = screenHeight + margin;
+            enemy->velocity.y *= -1;
+        }
     }
 }
 

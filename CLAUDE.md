@@ -16,17 +16,19 @@ make run
 make clean && make && make run
 ```
 
-## Debugging Commands
+## Development Commands
 
-When debugging issues after game restart or stage transitions:
 ```bash
-# Run with debug output (already implemented in game.c)
+# Run with debug output (shows stage info every 2 seconds)
 ./bin/game
+
+# Basic runtime test (runs game for 3 seconds)
+./test_memory
 ```
 
 ## Architecture Overview
 
-This is a particle-based game built with Raylib featuring an event-driven architecture. The game uses 100,000 particles that interact with enemies through physics simulation.
+This is a particle-based game built with Raylib 5.5 featuring an event-driven architecture with component-based design. The game uses 100,000 particles that interact with enemies through physics simulation.
 
 ### Core Systems
 
@@ -89,3 +91,56 @@ To test specific enemy types, modify stage definitions in `stage_manager.c`. For
 The game includes debug output that prints every 2 seconds during gameplay:
 - Stage number, timer, enemy count, stage state, current wave
 - Useful for diagnosing spawn issues
+
+## Entity System
+
+### Entity Types and Behaviors
+
+1. **Player** (`src/entities/player.h`):
+   - Boost system with gauge (speed boost, particle attraction boost)
+   - Invincibility frames after damage
+   - Toroidal world movement
+
+2. **Particles** (`src/entities/particle.h`):
+   - 100,000 pre-allocated instances
+   - Attracted to player within range
+   - Damage enemies on collision (1 damage per particle)
+
+3. **Enemies** (`src/entities/enemy.h`) - 11 types:
+   - BASIC: Simple movement patterns
+   - CHARGER: High-speed direct attacks
+   - SPLITTER: Splits into smaller enemies when damaged
+   - TELEPORTER: Random teleportation
+   - REPULSOR: Pushes particles away
+   - BLACKHOLE: Complex boss with magnetic storm phases
+   - SHIELD_GENERATOR: Creates protective barriers
+   - BOMBER: Explosive attacks
+   - CLUSTER: Groups that move together
+   - SNAKE_HEAD/SEGMENT: Chain enemies
+   - NIGHTMARE_LORD: Final boss (see boss_nightmare_design.md)
+
+### Critical Implementation Notes
+
+1. **Memory Management**:
+   - Always use memory pools for event data allocation
+   - Never allocate event data with malloc during gameplay
+   - Event handlers must free event data after processing
+
+2. **State Transitions**:
+   - Reset spawn timing when transitioning from TUTORIAL to STAGE_INTRO
+   - Stage timer starts during STAGE_INTRO phase, not PLAYING
+   - Current stage number must reset to 0 after game over
+
+3. **Collision Processing**:
+   - Batch process collisions for performance
+   - Use distance-based culling before detailed checks
+   - Collision events are pooled to prevent allocation
+
+4. **Event System Toggle**:
+   - Can be disabled for performance testing
+   - When disabled, systems must handle direct calls
+
+## Platform-Specific Notes
+
+- **macOS**: Raylib installed via Homebrew at `/opt/homebrew/Cellar/raylib/5.5`
+- **Windows**: Uses W64Devkit with Raylib at `C:/Users/namyunwoo/W64Devkit/w64devkit`

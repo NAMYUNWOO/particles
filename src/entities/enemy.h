@@ -72,6 +72,11 @@ typedef struct Enemy {
     bool hasShield;           // Shield status
     float shieldHealth;       // Shield health
     
+    // Smooth movement data for ENEMY_TYPE_BASIC
+    Vector2 wanderTarget;     // Current wander target position
+    float wanderAngle;        // Current wander angle for smooth turning
+    float turnSpeed;          // How fast the enemy can turn
+    
     // Boss-specific data
     int phase;                // Boss phase
     float phaseTimer;         // Timer for phase changes

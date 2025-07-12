@@ -10,6 +10,10 @@
 #include "../entities/managers/stage_manager.h"
 #include "event/event_system.h"
 
+// Global screen dimensions
+extern int g_screenWidth;
+extern int g_screenHeight;
+
 // Constants
 #define PARTICLE_COUNT 100000  // Maximum number of particles
 #define DEFAULT_ATTRACTION_FORCE 1.0f  // Default force for particle attraction

@@ -14,6 +14,10 @@
 
 #define SCOREBOARD_FILENAME "scoreboard.txt"
 
+// Define global screen dimensions
+int g_screenWidth = 800;
+int g_screenHeight = 800;
+
 // 외부 메모리 풀 참조 선언
 extern MemoryPool g_collisionEventPool;
 extern MemoryPool g_enemyEventPool;
@@ -29,6 +33,10 @@ static bool g_additionalPoolsInitialized = false;
 
 // Initialize game state and resources
 Game InitGame(int screenWidth, int screenHeight) {
+    // Set global screen dimensions
+    g_screenWidth = screenWidth;
+    g_screenHeight = screenHeight;
+    
     // 랜덤 시드 초기화
     SetRandomSeed(time(NULL));
     
@@ -329,17 +337,17 @@ void UpdateGame(Game* game) {
                 }
                 
                 // Debug output
-                static float lastDebugBlackhole = 0;
-                if (game->stageTimer - lastDebugBlackhole > 1.0f) {
-                    printf("BLACKHOLE: otherEnemies=%d, isInvuln=%d, hasPulsed=%d, stormTimer=%.1f\n", 
-                           otherEnemiesCount, game->enemies[i].isInvulnerable, 
-                           game->enemies[i].hasPulsed, game->enemies[i].stormCycleTimer);
-                    lastDebugBlackhole = game->stageTimer;
-                }
+                // static float lastDebugBlackhole = 0;
+                // if (game->stageTimer - lastDebugBlackhole > 1.0f) {
+                //     printf("BLACKHOLE: otherEnemies=%d, isInvuln=%d, hasPulsed=%d, stormTimer=%.1f\n", 
+                //            otherEnemiesCount, game->enemies[i].isInvulnerable, 
+                //            game->enemies[i].hasPulsed, game->enemies[i].stormCycleTimer);
+                //     lastDebugBlackhole = game->stageTimer;
+                // }
                 
                 // Update blackhole state based on other enemies
                 if (otherEnemiesCount == 0 && game->enemies[i].isInvulnerable && !game->enemies[i].hasPulsed) {
-                    printf("BLACKHOLE TRANSFORMATION TRIGGERED!\n");
+                    // printf("BLACKHOLE TRANSFORMATION TRIGGERED!\n");
                     // All other enemies are dead, perform pulse and transform immediately
                     game->enemies[i].hasPulsed = true;
                     game->enemies[i].isInvulnerable = false;
@@ -401,7 +409,8 @@ void UpdateGame(Game* game) {
                         // float stormStrength = 1.0f - (game->enemies[i].stormCycleTimer / 5.0f);
                         
                         // Alternative: Use sine wave for smoother transition
-                        float stormStrength = fmaxf(cosf((game->enemies[i].stormCycleTimer / 5.0f) * PI * 0.5f), 0.5f);
+                        // float stormStrength = fmaxf(cosf((game->enemies[i].stormCycleTimer / 5.0f) * PI * 0.5f), 0.5f);
+                        float stormStrength = 1.0f;
                         
                         
                         for (int p = 0; p < PARTICLE_COUNT; p++) {
@@ -1051,13 +1060,13 @@ void UpdateStageSystem(Game* game) {
     }
     
     // Debug: Print spawn info every 2 seconds
-    static float lastDebugPrint = 0;
-    if (game->stageTimer - lastDebugPrint > 2.0f) {
-        printf("DEBUG: Stage %d, Timer: %.1f, Enemies: %d, State: %d, Wave: %d\n", 
-               game->currentStageNumber, game->stageTimer, game->enemyCount, 
-               game->currentStage.state, game->currentStage.currentWave);
-        lastDebugPrint = game->stageTimer;
-    }
+    // static float lastDebugPrint = 0;
+    // if (game->stageTimer - lastDebugPrint > 2.0f) {
+    //     printf("DEBUG: Stage %d, Timer: %.1f, Enemies: %d, State: %d, Wave: %d\n", 
+    //            game->currentStageNumber, game->stageTimer, game->enemyCount, 
+    //            game->currentStage.state, game->currentStage.currentWave);
+    //     lastDebugPrint = game->stageTimer;
+    // }
     
     // Check stage completion
     CheckStageCompletion(game);
