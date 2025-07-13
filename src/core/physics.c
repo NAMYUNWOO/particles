@@ -16,6 +16,11 @@ MemoryPool g_enemyStateEventPool;
 MemoryPool g_stageEventPool;
 MemoryPool g_specialAbilityEventPool;
 MemoryPool g_bossPhaseEventPool;
+
+// External memory pools from item_manager.c
+extern MemoryPool g_itemEventPool;
+extern MemoryPool g_healthEventPool;
+
 static bool poolsInitialized = false;
 
 float PARTICLE_ENEMY_DAMAGE = 0.001f;

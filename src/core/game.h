@@ -8,6 +8,7 @@
 #include "../entities/managers/enemy_manager.h"
 #include "../entities/managers/particle_manager.h"
 #include "../entities/managers/stage_manager.h"
+#include "../entities/managers/item_manager.h"
 #include "event/event_system.h"
 
 // Global screen dimensions
@@ -63,6 +64,9 @@ typedef struct Game {
     Enemy* enemies;  // Dynamic array of enemies
     ExplosionParticle explosionParticles[MAX_EXPLOSION_PARTICLES];
     int explosionParticleCount;
+    
+    // Item management
+    ItemManager* itemManager;  // Pointer to global item manager
     
     // Scoreboard
     char playerName[MAX_NAME_LENGTH];

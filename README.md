@@ -1,573 +1,142 @@
-# Particle Simulation 게임
+# Particle Storm
 
-이 프로젝트는 Raylib을 사용한 입자(Particle) 시뮬레이션 게임으로, 플레이어가 파티클을 조작하고 적을 물리치는 인터랙티브 시뮬레이션입니다.
+A physics-based particle simulation game built with Raylib, featuring 100,000 interactive particles and progressive gameplay across 10 challenging stages.
 
-## 게임 개요
+## Features
 
-이 게임은 물리 기반 파티클 시뮬레이션을 통해 유체와 중력의 개념을 시각적으로 표현합니다. 플레이어는 작은 빨간색 사각형을 조작하여 수많은 파티클들을 끌어당기고, 이를 이용해 주기적으로 나타나는 적들을 물리칠 수 있습니다. 게임의 목표는 최대한 많은 적을 파괴하고 높은 점수를 달성하는 것입니다.
+### Core Gameplay
+- **100,000 Real-time Particles**: Physics-based particle simulation with attraction mechanics
+- **10 Progressive Stages**: Each stage introduces new enemy types and challenges
+- **Event-Driven Architecture**: Decoupled component system using publish-subscribe pattern
+- **Memory Pool Optimization**: High-performance memory management for smooth gameplay
 
-## 상세 기능
+### Game Mechanics
+- **Particle Attraction System**: Player can attract and control massive particle swarms
+- **Boost System**: Dual-gauge system for enhanced particle attraction and movement speed
+- **Dynamic Combat**: Use particles as weapons to defeat various enemy types
+- **Boss Battles**: Multi-phase boss encounters at stages 6 and 10
 
-### 플레이어 (Player)
-- **비주얼**: 작은 빨간색 사각형으로 화면에 표시됩니다.
-- **이동**: WASD 키 또는 방향키를 사용하여 상하좌우로 이동할 수 있습니다.
-- **파티클 끌어당기기**: 플레이어 주변의 파티클들을 자동으로 끌어당깁니다.
-- **강화된 인력**: 스페이스바를 누르고 있으면 파티클을 끌어당기는 힘이 2배로 증가합니다.
-- **이동 속도 증가**: Left Shift 키를 누르고 있으면 플레이어의 이동 속도가 2배로 증가합니다.
-- **충돌 감지**: 적들과 충돌할 경우 게임 오버 조건을 트리거합니다.
+### Enemy Variety
+- **16 Unique Enemy Types**: Each with distinct behaviors and visual styles
+  - Basic, Tracker, Speedy, Splitter, Orbiter
+  - Teleporter, Repulsor, Cluster, Blackhole
+  - Shield Generator, Bomber, Snake (Head/Segment)
+  - Boss enemies including Nightmare Lord and Final Boss
 
-### 파티클 (Particle)
-- **총 개수**: 최대 100,000개의 파티클이 시뮬레이션에 포함됩니다.
-- **비주얼**: 작은 검은색 점으로 표시되며, 속도에 따라 색상이 약간 변화합니다.
-- **물리 특성**: 
-  - 질량, 위치, 속도 및 가속도 정보를 가집니다.
-  - 플레이어로부터의 거리에 반비례하는 인력을 받습니다.
-  - 마찰력에 의해 서서히 속도가 감소합니다.
-- **상호작용**: 
-  - 플레이어와 상호작용하여 끌려옵니다.
-  - 적과 충돌하여 적의 체력을 감소시킵니다.
+### Visual Effects
+- **Explosion System**: Dynamic particle-based explosion effects
+- **Color-coded Feedback**: Visual indicators for enemy health, damage, and special states
+- **Screen Effects**: Impact feedback and stage transition effects
 
-### 적 (Enemy)
-- **생성 주기**: 평균 3초마다 화면 내 랜덤 위치에 생성됩니다.
-- **비주얼**: 
-  - 보라색 원형으로 표시됩니다.
-  - 플레이어 크기의 3-10배 크기를 가집니다.
-  - 체력이 감소할수록 색상이 단계적으로 변화합니다 (보라색 → 빨간색 → 노란색).
-  - 체력에 따라 투명도가 변화합니다 (체력이 낮을수록 더 투명해짐).
-- **체력 시스템**: 
-  - 초기 체력은 크기에 비례합니다.
-  - 파티클과 충돌할 때마다 일정 체력이 감소합니다.
-  - 체력이 0이 되면 폭발 효과와 함께 제거됩니다.
-- **행동 패턴**: 
-  - 기본적으로 플레이어 방향으로 천천히 이동합니다.
-  - 일정 확률로 방향을 변경하여 무작위적인 움직임을 보입니다.
+### Technical Features
+- **Efficient Collision Detection**: Batch processing and spatial optimization
+- **Scalable Event System**: Easily extensible architecture for new features
+- **Performance Monitoring**: Built-in debugging and performance tracking tools
+- **Save System**: Automatic score tracking and leaderboard
 
-### 점수 시스템
-- **점수 획득**: 
-  - 적 처치 시 적의 크기에 비례하는 점수를 획득합니다.
-  - 더 큰 적을 처치할수록 더 많은 점수를 얻습니다.
-- **기록 저장**: 
-  - 게임 종료 시 점수가 자동으로 `scoreboard.txt` 파일에 기록됩니다.
-  - 상위 10개의 최고 점수가 저장되고 표시됩니다.
-- **점수 표시**: 게임 화면 상단에 현재 점수와 최고 점수를 실시간으로 표시합니다.
+## Dependencies
 
-### 특수 효과
-- **폭발 효과**: 적이 파괴될 때 화려한 폭발 파티클 효과가 발생합니다.
-- **시각적 피드백**: 파티클 끌어당기기, 적 피해, 점수 획득 등에 대한 시각적 피드백을 제공합니다.
-- **화면 흔들림**: 적 처치 시 화면에 약간의 흔들림 효과가 발생하여 타격감을 높입니다.
+### Required
+- **Operating System**: macOS, Windows, or Linux
+- **Raylib**: Version 5.5 or higher
+- **Compiler**: GCC 9.0+ or compatible C compiler
+- **Build System**: GNU Make
 
-### 이벤트 시스템 (Event System)
-- **이벤트 기반 아키텍처**: 
-  - 게임 내 모든 상호작용이 이벤트를 통해 처리되는 구조로 리팩토링되었습니다.
-  - 코드의 결합도를 낮추고 확장성을 높이기 위한 설계를 적용했습니다.
-  - 각 시스템 간의 직접적인 의존성을 제거하여 모듈화된 개발이 가능합니다.
-- **주요 이벤트 타입**:
-  - 시스템 이벤트: 프레임 시작/종료, 게임 초기화/종료 등 게임 루프 관련 이벤트
-  - 입력 이벤트: 키보드 입력 감지 및 처리를 위한 이벤트 (KEY_PRESSED, KEY_RELEASED)
-  - 충돌 이벤트: 엔티티 간 충돌 감지 및 처리를 위한 이벤트
-  - 상태 변경 이벤트: 게임 상태 변화, 적 상태 변화 등을 알리는 이벤트
-  - 파티클 이벤트: 파티클 이동, 소멸 등과 관련된 이벤트
-  - 점수 관련 이벤트: 점수 변경, 최고 점수 달성 등의 이벤트
-- **발행-구독 모델**:
-  - 이벤트 발행자(Publisher)와 구독자(Subscriber) 간의 느슨한 결합
-  - PublishEvent() 함수를 통해 이벤트를 발행하고, SubscribeToEvent() 함수로 이벤트 구독
-  - 여러 시스템이 동일한 이벤트에 각각 다른 방식으로 반응 가능
-  - 새로운 기능 추가 시 기존 코드 수정 없이 이벤트 구독만으로 확장 가능
-- **이벤트 큐 시스템**:
-  - 이벤트를 큐에 저장하고 ProcessEventQueue() 함수를 통해 순차적으로 처리
-  - 동시에 발생하는 다수의 이벤트를 안정적으로 관리
-  - 타임스탬프를 통한 이벤트 발생 시간 추적 및 디버깅 지원
-- **이벤트 데이터 구조**:
-  - KeyEventData: 키보드 입력 관련 데이터(키 코드, 누름/뗌 상태)
-  - CollisionEventData: 충돌한 엔티티 정보 및 충돌 강도
-  - EnemyDefeatedEventData: 처치된 적의 정보 및 점수
-  - PlayerDamageEventData: 플레이어 피해 정보
-  - GameStateChangeEventData: 게임 상태 변경 정보
-  - 기타 게임 메카닉에 필요한 이벤트 데이터 구조체
-- **메모리 관리**:
-  - 메모리 풀을 이용한 이벤트 데이터의 동적 할당 및 자동 해제 메커니즘
-  - 이벤트 처리 후 CleanupEventData 핸들러를 통한 메모리 정리
-  - 메모리 누수 방지를 위한 안전한 설계
-- **동적 이벤트 핸들링**:
-  - 런타임에 이벤트 핸들러 등록 및 해제 가능
-  - 컨텍스트 포인터를 통한 상태 공유 및 접근
-  - 다양한 게임 상황에 따른 조건부 이벤트 처리
+### Development Tools
+- **Git**: For version control
+- **Text Editor/IDE**: Any C-compatible editor
 
-## 게임 조작법
+## Setup Steps
 
-- **방향키 또는 WASD**: 플레이어 이동
-- **스페이스바**: 누르고 있는 동안 파티클을 끌어당기는 힘이 증가(2배), 게이지를 사용함
-- **Left shift 키**: 누르고 있는 동안 플레이어의 이동속도가 증가 (2배), 게이지를 사용함
+### 1. Install Raylib
 
-## 기술적 구현 상세
-
-### 물리 시스템
-- **중력 시뮬레이션**: 
-  - 뉴턴의 중력 법칙을 단순화하여 구현했습니다 (F = G * m1 * m2 / r^2).
-  - 거리가 너무 가까워지면 발산을 방지하기 위한 최소 거리 제한을 적용했습니다.
-- **마찰력**: 
-  - 각 파티클에 속도에 비례하는 마찰력을 적용하여 자연스러운 감속을 구현했습니다.
-  - 마찰 계수는 게임 밸런스를 위해 세심하게 조정되었습니다.
-- **충돌 감지 및 응답**: 
-  - 파티클-적 충돌은 원형 충돌 감지(CheckCollisionCircles)를 사용합니다.
-  - 충돌 시 파티클의 운동량이 적에게 전달되는 효과를 구현했습니다.
-
-### 이벤트 시스템 구현 상세
-- **핵심 컴포넌트**:
-  - **EventSystem**: 이벤트 발행, 구독, 처리를 관리하는 핵심 모듈
-  - **EventQueue**: 이벤트를 저장하고 순차적으로 처리하는 큐 구현
-  - **EventHandler**: 이벤트 처리 함수 포인터 및 콜백 메커니즘
-- **데이터 구조**:
-  - **Event**: 이벤트 타입, 데이터, 타임스탬프를 포함하는 구조체
-  - **EventType**: 다양한 이벤트 유형을 정의하는 열거형
-  - **EventListener**: 이벤트 구독자 정보를 저장하는 구조체
-- **주요 기능**:
-  - **PublishEvent()**: 이벤트를 발행하고 큐에 추가
-  - **SubscribeToEvent()**: 특정 이벤트 유형에 핸들러 등록
-  - **ProcessEventQueue()**: 큐에 있는 모든 이벤트를 처리
-  - **UnsubscribeFromEvent()**: 이벤트 구독 취소
-- **메모리 관리**:
-  - 이벤트 데이터를 위한 메모리 풀 기반 동적 할당 및 자동 해제 메커니즘
-  - 이벤트 처리 후 메모리 정리를 담당하는 정리 핸들러
-
-### 메모리 풀 (Memory Pool) 최적화
-- **개요**:
-  - 메모리 풀은 동적 메모리 할당/해제의 오버헤드를 최소화하기 위해 구현되었습니다.
-  - 미리 할당된 메모리 블록들을 재사용하여 메모리 할당 지연과 단편화를 방지합니다.
-- **구현 상세**:
-  - **MemoryPool 구조체**: 블록 배열, 사용 가능한 블록 목록, 블록 크기, 용량 정보를 관리
-  - **MemoryPool_Init()**: 풀 초기화 및 메모리 블록 할당
-  - **MemoryPool_Alloc()**: 풀에서 사용 가능한 블록 할당
-  - **MemoryPool_Free()**: 사용한 블록을 풀로 반환
-  - **MemoryPool_Destroy()**: 풀에 할당된 모든 메모리 해제
-- **적용 영역**:
-  - **이벤트 데이터**: 모든 이벤트 데이터에 메모리 풀 적용 (AllocEventData, FreeEventData)
-  - **충돌 이벤트**: 파티클-적 충돌 관련 데이터 처리에 메모리 풀 사용
-  - **적 이벤트**: 적 생성, 파괴, 체력 변화, 상태 변화 관련 데이터에 메모리 풀 적용
-  - **폭발 효과**: 폭발 파티클 생성 및 관리에 최적화된 메모리 처리
-  - **키 입력 이벤트**: 키 이벤트 데이터의 효율적인 할당 및 해제
-
-### 적 시스템의 이벤트 기반 구현
-- **적 관련 이벤트 타입**:
-  - **EVENT_ENEMY_SPAWNED**: 적이 생성될 때 발생하는 이벤트
-  - **EVENT_ENEMY_DESTROYED**: 적이 파괴될 때 발행되는 이벤트
-  - **EVENT_ENEMY_HEALTH_CHANGED**: 적의 체력이 변경될 때 발행
-  - **EVENT_ENEMY_STATE_CHANGED**: 적의 상태가 변경될 때 발행
-- **적 관련 이벤트 데이터 구조체**:
-  - **EnemyEventData**: 적 인덱스와 포인터 정보를 포함
-  - **EnemyHealthEventData**: 체력 변화 전후 값과 적 정보 포함
-  - **EnemyStateEventData**: 상태 변화 전후 값과 적 정보 포함
-- **이벤트 핸들러 활용**:
-  - **적 생성 핸들러**: 적이 생성될 때 이벤트를 구독하여 초기화 및 로그 기록
-  - **적 파괴 핸들러**: 적이 파괴될 때 메모리 해제, 점수 증가, 폭발 효과 생성
-  - **체력 변화 핸들러**: 체력 변화에 따른 시각적 피드백 및 파괴 조건 확인
-  - **상태 변화 핸들러**: 각 상태별 행동 패턴 변경 및 시각 효과 적용
-- **이벤트 기반 아키텍처의 이점**:
-  - 적 시스템과 다른 시스템(충돌, 렌더링, UI) 간의 결합도 감소
-  - 적 행동 패턴 추가/수정 시 기존 코드 변경 최소화
-  - 중앙 집중식 적 관리로 코드 일관성 및 유지보수성 향상
-  - 이벤트 로깅을 통한 디버깅 및 분석 용이성
-- **구현 상세**:
-  - 적 관리자(EnemyManager)가 적 생성/파괴 시 해당 이벤트 발행
-  - 충돌 시스템에서 적-파티클 충돌 감지 시 체력 변화 이벤트 발행
-  - 게임 로직이 적 상태에 직접 접근하지 않고 이벤트를 통해 상호작용
-  - 체력이 0이 되면 자동으로 파괴 이벤트가 발행되어 적 제거 처리
-
-### 최적화 기술
-- **메모리 풀 기법**: 
-  - 이벤트 데이터, 충돌 데이터, 적 상태 데이터 등에 메모리 풀 적용
-  - 동적 메모리 할당/해제 오버헤드 감소 및 메모리 단편화 방지
-  - FPS 저하 문제를 해결하기 위한 핵심 최적화 기법
-- **배치 충돌 처리**: 
-  - 충돌 감지를 배치로 나누어 처리하여 성능 향상
-  - 동일한 적에 대한 다수의 파티클 충돌을 누적 처리
-- **거리 기반 필터링**: 
-  - 거리 기반 필터링으로 명백히 충돌하지 않는 경우 빠르게 건너뛰기
-  - 충돌 감지 계산량 감소
-- **이벤트 처리 최적화**: 
-  - 이벤트 핸들러의 효율적인 호출
-  - 중복 이벤트 발행 방지 및 이벤트 데이터의 재사용
-
-### 렌더링 시스템
-- **Raylib 렌더링**: 
-  - Raylib의 기본 도형 렌더링 함수를 사용하여 게임 요소를 그립니다.
-  - 투명도, 색상 변화 등의 시각적 효과를 Raylib의 Color 처리 기능으로 구현했습니다.
-- **최적화된 배치 렌더링**: 
-  - 대량의 파티클을 효율적으로 렌더링하기 위해 배치 처리 기법을 적용했습니다.
-  - 화면 밖 객체는 렌더링하지 않는 컬링 기법을 사용합니다.
-
-## 코드 구조 및 모듈 설명
-
-프로젝트는 다음과 같은 구조로 조직되어 있으며, 각 모듈은 특정 기능을 담당합니다:
-
-```
-├── src/
-│   ├── main.c              # 메인 진입점, 게임 루프 관리
-│   ├── core/
-│   │   ├── game.c          # 게임 상태 관리 및 전체 게임 로직 조정
-│   │   ├── game.h          # 게임 구조체 및 핵심 함수 선언
-│   │   ├── physics.c       # 물리 시뮬레이션 기능 구현
-│   │   ├── physics.h       # 물리 시뮬레이션 함수 선언
-│   │   ├── input_handler.c # 입력 처리 및 이벤트 발행 
-│   │   ├── input_handler.h # 입력 핸들러 함수 선언
-│   │   ├── memory_pool.c   # 메모리 풀 시스템 구현
-│   │   ├── memory_pool.h   # 메모리 풀 인터페이스 정의
-│   │   └── event/          # 이벤트 시스템 관련 파일
-│   │       ├── event_system.c  # 이벤트 시스템 핵심 기능 구현
-│   │       ├── event_system.h  # 이벤트 시스템 인터페이스 정의
-│   │       └── event_types.h   # 이벤트 데이터 구조체 정의
-│   └── entities/
-│       ├── player.c        # 플레이어 로직 및 상호작용 구현
-│       ├── player.h        # 플레이어 구조체 및 함수 선언
-│       ├── enemy.c         # 적 생성, 업데이트, 제거 로직
-│       ├── enemy.h         # 적 구조체 및 관련 함수 선언
-│       ├── particle.c      # 파티클 시뮬레이션 물리 및 행동 구현
-│       ├── particle.h      # 파티클 구조체 및 관련 함수 선언
-│       ├── explosion.c     # 폭발 효과 관련 기능 구현
-│       ├── explosion.h     # 폭발 효과 구조체 및 함수 선언
-│       └── managers/       # 엔티티 관리자 모듈
-│           ├── enemy_manager.c    # 적 엔티티 관리 기능
-│           ├── enemy_manager.h    # 적 관리자 인터페이스
-│           ├── particle_manager.c # 파티클 엔티티 관리 기능
-│           └── particle_manager.h # 파티클 관리자 인터페이스
-├── bin/                    # 빌드된 실행 파일 저장 디렉토리
-├── assets/                 # 게임 리소스 파일(예: 이미지, 사운드) 디렉토리
-├── Makefile                # 빌드 설정 및 명령어 정의
-├── scoreboard.txt          # 최고 점수 기록 저장 파일
-└── README.md               # 프로젝트 설명 문서
-```
-
-### 모듈별 주요 기능
-
-#### main.c
-메인 진입점으로, 게임 초기화, 메인 루프, 종료 처리를 담당합니다.
-- **InitGame()**: Raylib 및 게임 요소 초기화
-- **UpdateGame()**: 프레임마다 게임 상태 업데이트
-- **DrawGame()**: 현재 게임 상태 렌더링
-- **CloseGame()**: 게임 종료 및 리소스 해제
-
-#### game.c/h
-게임의 전체 상태를 관리하고 다른 모듈 간의 상호작용을 조정합니다.
-- **Game 구조체**: 게임의 모든 상태를 포함하는 중앙 데이터 구조
-- **InitGameState()**: 게임 상태 초기화
-- **UpdateGameState()**: 모든 게임 객체 업데이트 및 충돌 검사
-- **HandleCollisions()**: 게임 내 충돌 감지 및 처리
-- **UpdateScore()**: 점수 계산 및 기록
-- **SaveHighScore()**: 최고 점수 파일 저장
-
-#### memory_pool.c/h
-메모리 풀 시스템을 관리하여 메모리 할당/해제 오버헤드를 줄입니다.
-- **MemoryPool 구조체**: 메모리 블록과 사용 가능한 블록 관리
-- **MemoryPool_Init()**: 메모리 풀 초기화 및 블록 할당
-- **MemoryPool_Alloc()**: 풀에서 메모리 블록 할당
-- **MemoryPool_Free()**: 사용한 메모리 블록을 풀에 반환
-- **MemoryPool_Destroy()**: 메모리 풀 정리 및 자원 해제
-
-#### event_system.c/h
-이벤트 기반 아키텍처의 핵심 구성 요소입니다.
-- **이벤트 관리**: 이벤트 생성, 발행, 구독 및 처리
-- **이벤트 큐**: 이벤트의 순차적 처리를 위한 큐 구현
-- **핸들러 관리**: 이벤트 핸들러 등록 및 관리
-- **메모리 관리**: 이벤트 데이터의 안전한 할당 및 해제 (메모리 풀 적용)
-
-#### input_handler.c/h
-키보드 입력 처리와 이벤트 발행을 담당합니다.
-- **키 입력 감지**: 방향키, 액션키(스페이스바, Left Shift) 등의 입력 감지
-- **이벤트 발행**: 입력에 따른 적절한 이벤트 생성 및 발행
-- **핸들러 등록**: 입력 이벤트를 처리할 핸들러 등록
-- **메모리 관리**: 입력 이벤트 데이터의 동적 할당 및 해제
-
-#### player.c/h
-플레이어 캐릭터와 관련된 모든 기능을 구현합니다.
-- **Player 구조체**: 플레이어 위치, 크기, 속도 등 정보
-- **InitPlayer()**: 플레이어 초기화
-- **UpdatePlayer()**: 입력 처리 및 플레이어 상태 업데이트, 속도 부스트 처리
-- **DrawPlayer()**: 플레이어 렌더링
-- **HandlePlayerInput()**: 키보드 입력 처리
-- **부스트 시스템**: 파티클 끌어당김 및 이동 속도 향상 기능
-
-#### physics.c/h
-물리 시뮬레이션과 충돌 감지를 처리합니다.
-- **충돌 감지**: 다양한 엔티티 간의 충돌 체크 및 해결
-- **이벤트 발행**: 충돌 시 적절한 이벤트 발행
-- **메모리 풀 관리**: 충돌 관련 이벤트 데이터의 메모리 풀 관리
-
-#### enemy.c/h & enemy_manager.c/h
-적 개체의 생성, 행동, 제거 등을 처리합니다.
-- **Enemy 구조체**: 적의 위치, 크기, 체력, 상태 정보
-- **적 생성/제거**: 적 개체의 생성 및 제거 로직
-- **상태 관리**: 적 체력 및 상태 업데이트
-- **이벤트 발행**: 적 관련 이벤트 발행 및 처리 (메모리 풀 적용)
-
-#### explosion.c/h
-폭발 효과와 관련된 파티클 시스템을 관리합니다.
-- **폭발 파티클 생성**: 적 파괴 시 화려한 폭발 효과 생성
-- **파티클 업데이트**: 시간에 따른 파티클 위치, 크기, 색상 변화
-- **효율적인 메모리 관리**: 폭발 효과에 대한 최적화된 메모리 사용
-
-## 빌드 및 실행 방법
-
-### 요구 사항
-
-- **운영체제**: macOS, Windows, Linux
-- **라이브러리**: Raylib 5.5 이상
-- **컴파일러**: GCC 9.0+ 또는 호환 가능한 컴파일러
-- **빌드 도구**: Make
-
-### 빌드 방법
-
+#### macOS (using Homebrew)
 ```bash
-# 프로젝트 빌드
-make clean
-make
-
-# 프로젝트 실행
-make run
-
-# 빌드 파일 정리
-make clean
-```
-
-### 의존성 설치 (macOS)
-
-```bash
-# Homebrew를 통한 Raylib 설치
 brew install raylib
+```
 
-# 또는 소스에서 직접 빌드
+#### macOS (from source)
+```bash
 git clone https://github.com/raysan5/raylib.git
 cd raylib/src
 make
 sudo make install
 ```
 
-## 개발 과정 및 Git 브랜치 관리
-
-프로젝트는 다음과 같은 단계로 개발되었습니다:
-
-1. **초기 개발 (main 브랜치)**:
-   - 기본 프로젝트 구조 설정
-   - Raylib 초기화 및 창 설정
-   - 플레이어 및 기본 파티클 구현
-   - 파티클 끌어당기기 물리 구현
-
-2. **'warp' 브랜치**:
-   - 플레이어와 파티클 위치 교체 기능 구현
-   - Q 키를 눌러 랜덤 파티클과 위치 교체
-   - 텔레포트 시각 효과 및 쿨다운 구현
-   - 성능 최적화 및 버그 수정
-   - main 브랜치에 병합 완료
-
-3. **'enemy' 브랜치**:
-   - Enemy 구조체 및 관련 함수 정의
-   - 3초마다 랜덤 위치에 적 생성
-   - 적-파티클 충돌 감지 및 피해 처리
-   - 적 체력 시스템 및 시각적 변화 구현
-   - 적 폭발 효과 구현
-   - main 브랜치에 병합 완료
-
-4. **점수 시스템 구현**:
-   - 적 처치 시 점수 획득 로직
-   - 점수 표시 및 최고 점수 저장
-   - scoreboard.txt 파일 관리
-   - main 브랜치에 직접 구현
-
-5. **이벤트 시스템 구현**:
-   - 이벤트 시스템 핵심 구조 설계 및 구현
-   - 이벤트 발행-구독 메커니즘 구현
-   - 이벤트 큐 및 핸들러 시스템 개발
-   - 입력 처리를 이벤트 기반으로 리팩토링
-   - 점진적 마이그레이션을 통한 안정성 확보
-
-6. **메모리 최적화**:
-   - 메모리 풀 시스템 구현
-   - 이벤트 데이터에 메모리 풀 적용
-   - 충돌 이벤트 데이터 최적화
-   - 적 관련 이벤트 데이터 처리 개선
-   - 키 입력 이벤트 최적화
-   - 폭발 파티클 메모리 관리 개선
-
-7. **최적화 및 정리**:
-   - 코드 리팩토링 및 모듈화
-   - 상수 정의 및 가독성 개선
-   - 주석 추가 및 문서화
-   - 성능 병목 지점 개선
-   - Left Shift 키를 이용한 이동 속도 증가 기능 구현
-
-## GitHub 저장소
-
-프로젝트 코드는 GitHub에서 확인할 수 있습니다: [https://github.com/NAMYUNWOO/particles](https://github.com/NAMYUNWOO/particles)
-
-## 라이센스
-
-이 프로젝트는 MIT 라이센스 하에 배포됩니다. 자세한 내용은 LICENSE 파일을 참조하세요.
-
-## 향후 계획
-
-- **메모리 풀 추가 최적화**:
-  - 파티클 메모리 관리 개선
-  - 더 작은 크기의 메모리 블록 관리 방식 추가
-  - 메모리 풀 성능 모니터링 기능 추가
-
-- **이벤트 시스템 확장**:
-  - 게임 상태 변경을 이벤트로 처리
-  - 추가적인 입력 기능에 대한 이벤트 처리
-
-- **다양한 적 유형**: 다른 행동 패턴과 특성을 가진 적 추가
-- **플레이어 능력치 시스템**: 게임 진행에 따라 강화되는 플레이어 능력
-- **레벨 시스템**: 다양한 스테이지와 난이도 구현
-- **특수 효과 강화**: 더 화려하고 다양한 파티클 효과
-- **사운드 및 음악**: 게임 분위기를 높이는 효과음과 배경음악
-- **멀티플레이어 모드**: 로컬 또는 네트워크 멀티플레이어 지원
-- **커스터마이징 옵션**: 게임 설정 및 시각적 요소 사용자 정의
-
-# Particle Storm - 10 Stage Adventure
-
-## 🎮 새로운 스테이지 시스템
-
-이제 게임에는 점진적으로 어려워지는 10개의 스테이지가 포함되어 있습니다. 각 스테이지는 고유한 적 타입, 패턴, 그리고 도전 과제를 제공합니다.
-
-### 📊 스테이지 개요
-
-#### Stage 1: Welcome to the Particle Storm
-- **테마**: 튜토리얼
-- **적 타입**: Basic enemies
-- **목표**: 기본 게임플레이 학습
-- **특징**: 천천히 움직이는 기본 적들, 플레이어가 조작법을 익힐 수 있는 쉬운 난이도
-
-#### Stage 2: The Hunt Begins
-- **테마**: 추적자 등장
-- **적 타입**: Tracker enemies (T)
-- **목표**: 움직임과 회피 기술 향상
-- **특징**: 플레이어를 추적하는 적들이 등장, 전략적인 움직임 필요
-
-#### Stage 3: Speed Demons
-- **테마**: 속도 도전
-- **적 타입**: Speedy enemies (S)
-- **목표**: 빠른 반응과 부스트 활용
-- **특징**: 매우 빠르게 움직이는 적들, 지그재그 패턴, 부스트 게이지 관리 중요
-
-#### Stage 4: Divide and Conquer
-- **테마**: 분열하는 적
-- **적 타입**: Splitter enemies (X)
-- **목표**: 연쇄 반응 제어
-- **특징**: 파괴 시 작은 적으로 분열, 화면이 빠르게 적으로 가득 찰 수 있음
-
-#### Stage 5: Orbital Mechanics
-- **테마**: 복잡한 움직임 패턴
-- **적 타입**: Orbiter enemies (O)
-- **목표**: 패턴 인식과 예측
-- **특징**: 원형 궤도로 움직이는 적들, 예측 가능하지만 복잡한 패턴
-
-#### Stage 6: Guardian of the Void (BOSS)
-- **테마**: 첫 번째 보스전
-- **적 타입**: Boss 1 (B1)
-- **목표**: 보스 격파
-- **특징**: 
-  - 3단계 페이즈 (70%, 30% 체력에서 변화)
-  - 실드 시스템
-  - 부하 소환
-  - 페이즈 전환 시 무적
-
-#### Stage 7: Quantum Flux
-- **테마**: 순간이동
-- **적 타입**: Teleporter enemies (!)
-- **목표**: 예측 불가능한 적 대응
-- **특징**: 2초마다 랜덤 위치로 순간이동, 하얀 섬광 효과
-
-#### Stage 8: Magnetic Storm
-- **테마**: 파티클 반발
-- **적 타입**: Repulsor enemies (R)
-- **목표**: 새로운 전략 개발
-- **특징**: 파티클을 밀어내는 자기장, 접근하기 어려운 적들
-
-#### Stage 9: Chain Reaction
-- **테마**: 연쇄 폭발
-- **적 타입**: Cluster enemies (C)
-- **목표**: 연쇄 반응 활용
-- **특징**: 파괴 시 주변 적에게 피해, 전략적 타이밍 중요
-
-#### Stage 10: The Particle Overlord (FINAL BOSS)
-- **테마**: 최종 보스전
-- **적 타입**: Final Boss (BF)
-- **목표**: 게임 클리어
-- **특징**:
-  - 모든 적 타입의 능력 보유
-  - 3단계 페이즈
-  - 대량의 부하 소환
-  - 황금색 테마
-
-### 🎯 새로운 적 타입별 특성
-
-| 적 타입 | 기호 | 색상 | 특수 능력 | 점수 |
-|---------|------|------|-----------|------|
-| Basic | - | 보라색 | 없음 | 100 |
-| Tracker | T | 빨간색 | 플레이어 추적 | 150 |
-| Speedy | S | 하늘색 | 고속 이동, 지그재그 | 200 |
-| Splitter | X | 초록색 | 파괴 시 분열 | 250 |
-| Orbiter | O | 주황색 | 원형 궤도 이동 | 180 |
-| Boss 1 | B1 | 진한 보라색 | 실드, 페이즈 변화 | 1000 |
-| Teleporter | ! | 보라색 | 순간이동 | 300 |
-| Repulsor | R | 노란색 | 파티클 반발장 | 350 |
-| Cluster | C | 마젠타 | 연쇄 폭발 | 220 |
-| Final Boss | BF | 황금색 | 모든 능력 | 2000 |
-
-### 🎮 스테이지 진행 시스템
-
-1. **스테이지 시작**: 3초간 스테이지 소개 화면
-2. **웨이브 시스템**: 각 스테이지는 여러 웨이브로 구성
-3. **목표 달성**: 정해진 수의 적을 처치하면 스테이지 클리어
-4. **보스 경고**: 보스 스테이지 전 특별 경고 화면
-5. **스테이지 완료**: 완료 화면 후 Enter 키로 다음 스테이지
-
-### 🏆 점수 시스템
-
-- 기본 점수 + (스테이지 번호 × 10%)
-- 스테이지 클리어 보너스: 500 × 스테이지 번호
-- 연쇄 폭발 보너스
-- 보스 격파 보너스
-
-### 💡 전략 팁
-
-1. **Stage 1-3**: 기본 조작 숙달, 부스트 게이지 관리 연습
-2. **Stage 4-5**: 화면 관리 중요, 적이 너무 많아지기 전에 처리
-3. **Stage 6**: 보스의 페이즈 변화 타이밍 파악, 부하 우선 처리
-4. **Stage 7-8**: 새로운 메커니즘 이해, 대체 전략 개발
-5. **Stage 9**: 연쇄 폭발을 이용한 효율적인 처리
-6. **Stage 10**: 모든 기술 총동원, 인내심 필요
-
-### 🐛 디버깅 및 개발자 옵션
-
-게임 플레이 중 다음 키를 사용할 수 있습니다:
-- `F1`: 현재 스테이지 정보 표시
-- `F2`: 다음 스테이지로 건너뛰기 (개발용)
-- `F3`: 무적 모드 토글 (개발용)
-
-## 🔧 빌드 방법
-
+#### Linux (Ubuntu/Debian)
 ```bash
-# 프로젝트 빌드
+sudo apt update
+sudo apt install libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev
+git clone https://github.com/raysan5/raylib.git
+cd raylib/src
+make
+sudo make install
+```
+
+#### Windows
+- Download pre-compiled binaries from [Raylib releases](https://github.com/raysan5/raylib/releases)
+- Or use MinGW:
+```bash
+git clone https://github.com/raysan5/raylib.git
+cd raylib/src
+mingw32-make
+```
+
+### 2. Clone the Repository
+```bash
+git clone https://github.com/NAMYUNWOO/particles.git
+cd particles
+```
+
+### 3. Build the Project
+```bash
+# Clean any previous builds
 make clean
+
+# Build the project
 make
 
-# 게임 실행
+# Run the game
 make run
+
+# Or do everything in one command
+make clean && make && make run
 ```
 
-## 📁 새로운 파일 구조
+### 4. Verify Installation
+If the build is successful, you should see:
+- `bin/game` executable created
+- No compilation errors
+- Game window opens when running `make run`
 
-```
-src/entities/managers/
-├── stage_manager.h    # 스테이지 시스템 헤더
-├── stage_manager.c    # 스테이지 구현
-├── enemy_manager.h    # 강화된 적 관리
-└── enemy_manager.c    # AI 및 패턴 구현
-```
+## Troubleshooting
 
-## 🎯 향후 계획
+### Common Build Issues
 
-- 엔드리스 모드 추가
-- 협동 멀티플레이어
-- 파워업 시스템
-- 업적 시스템
-- 리더보드 온라인 동기화
+#### "raylib.h not found"
+- Ensure Raylib is properly installed
+- Check include paths in Makefile
+- On macOS with Homebrew: `export CPATH=/opt/homebrew/include:$CPATH`
+
+#### Linking errors
+- Verify Raylib libraries are in the system path
+- Check library paths in Makefile
+- On Linux, you may need to run: `sudo ldconfig`
+
+#### Performance issues
+- Ensure you're building in release mode
+- Check that your system meets minimum requirements
+- Try reducing particle count in `src/entities/particle.h` if needed
+
+## Quick Start
+
+After successful setup:
+1. Run the game with `make run` or `./bin/game`
+2. Use WASD or arrow keys to move
+3. Hold Space to boost particle attraction
+4. Hold Left Shift to boost movement speed
+5. Survive through all 10 stages!
+
+## License
+
+This project is distributed under the MIT License. See LICENSE file for details.

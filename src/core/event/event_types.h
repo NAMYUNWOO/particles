@@ -98,4 +98,18 @@ typedef struct {
 
 // 향후 다른 이벤트 데이터 구조체는 여기에 추가
 
+// Item event data
+typedef struct {
+    int itemType;    // 0: HP Potion, future: other items
+    Vector2 position;
+    void* itemPtr;
+} ItemEventData;
+
+// Health restoration event data
+typedef struct {
+    int oldHealth;
+    int newHealth;
+    int amountRestored;
+} HealthRestoredEventData;
+
 #endif // EVENT_TYPES_H 

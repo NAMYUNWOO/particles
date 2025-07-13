@@ -88,6 +88,10 @@ Game InitGame(int screenWidth, int screenHeight) {
     // 적(enemy) 배열 동적 할당
     game.enemies = (Enemy*)malloc(MAX_ENEMIES * sizeof(Enemy));
     
+    // Initialize item manager
+    InitItemManager();
+    game.itemManager = &g_itemManager;
+    
     LoadScoreboard(&game, SCOREBOARD_FILENAME);
 
     return game;
@@ -464,6 +468,10 @@ void UpdateGame(Game* game) {
         // Enemy-Particle 충돌 체크 및 이벤트 발행
         ProcessEnemyCollisions(game);
         
+        // Update items and check item collisions
+        UpdateItemManager(game->deltaTime, game->screenWidth, game->screenHeight);
+        CheckItemCollisions(&game->player);
+        
         // 플레이어-적 충돌 체크
         for (int i = 0; i < game->enemyCount; i++) {
             float px = game->player.position.x + game->player.size/2;
@@ -652,6 +660,9 @@ void DrawGame(Game* game) {
             DrawEnemy(game->enemies[i]);
         }
         
+        // Draw items
+        DrawItems();
+        
         // 점수 표시
         char scoreText[32];
         sprintf(scoreText, "Score: %d", game->score);
@@ -741,6 +752,9 @@ void CleanupGame(Game* game) {
         MemoryPool_Destroy(&g_particleEffectEventPool);
         g_additionalPoolsInitialized = false;
     }
+    
+    // Cleanup item manager
+    CleanupItemManager();
     
     // 이벤트 시스템 정리
     CleanupEventSystem();

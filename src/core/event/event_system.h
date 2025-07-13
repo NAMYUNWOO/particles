@@ -51,6 +51,12 @@ typedef enum {
     EVENT_SCORE_CHANGED,         // New: Score changed
     EVENT_MILESTONE_REACHED,     // New: Achievement/milestone
     
+    // Item-related events
+    EVENT_ITEM_SPAWNED,          // When any item spawns
+    EVENT_ITEM_COLLECTED,        // When player collects item
+    EVENT_ITEM_EXPIRED,          // When item disappears
+    EVENT_HP_RESTORED,           // When player health is restored
+    
     // 향후 추가 이벤트를 위한 자리
     
     EVENT_COUNT  // 이벤트 총 개수

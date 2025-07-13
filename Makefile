@@ -9,6 +9,7 @@ SRC_DIR      := src
 CORE_DIR     := $(SRC_DIR)/core
 ENTITIES_DIR := $(SRC_DIR)/entities
 MANAGERS_DIR := $(ENTITIES_DIR)/managers
+ITEMS_DIR    := $(ENTITIES_DIR)/items
 BIN_DIR      := bin
 
 # Source and object files
@@ -23,9 +24,11 @@ SRC_FILES := \
 	$(ENTITIES_DIR)/particle.c \
 	$(ENTITIES_DIR)/enemy.c \
 	$(ENTITIES_DIR)/explosion.c \
+	$(ITEMS_DIR)/hp_potion.c \
 	$(MANAGERS_DIR)/enemy_manager.c \
 	$(MANAGERS_DIR)/particle_manager.c \
-	$(MANAGERS_DIR)/stage_manager.c
+	$(MANAGERS_DIR)/stage_manager.c \
+	$(MANAGERS_DIR)/item_manager.c
 OBJ_FILES := $(SRC_FILES:.c=.o)
 
 # Platform detection: Windows_NT for Windows, otherwise assume macOS
