@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "upstash-context-7-mcp": {
+      "type": "http",
+      "url": "https://server.smithery.ai/@upstash/context7-mcp/mcp"
+    }
+  }
+}
