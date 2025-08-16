@@ -1,77 +1,142 @@
-# Particle Simulation
+# Particle Storm
 
-이 프로젝트는 Raylib을 사용한 입자(Particle) 시뮬레이션 게임으로, 다음과 같은 특징을 가지고 있습니다:
+A physics-based particle simulation game built with Raylib, featuring 100,000 interactive particles and progressive gameplay across 10 challenging stages.
 
-## 기능
+## Features
 
-- **플레이어**: 작은 빨간색 사각형으로 표시되며, 방향키로 이동할 수 있습니다.
-- **입자(Particle)**: 100,000개의 검은색 작은 입자들이 화면 상에 분포되며, 플레이어를 향해 끌려옵니다.
-- **적(Enemy)**: 보라색 원형으로 표시되며, 일정 시간마다 자동으로 생성됩니다.
-  - 입자와 충돌할 때마다 체력이 감소하며, 체력이 줄어들수록 색상이 변합니다 (보라색 → 빨간색 → 노란색).
-  - 체력이 0이 되면 폭발하며 사라집니다.
+### Core Gameplay
+- **100,000 Real-time Particles**: Physics-based particle simulation with attraction mechanics
+- **10 Progressive Stages**: Each stage introduces new enemy types and challenges
+- **Event-Driven Architecture**: Decoupled component system using publish-subscribe pattern
+- **Memory Pool Optimization**: High-performance memory management for smooth gameplay
 
-## 조작 방법
+### Game Mechanics
+- **Particle Attraction System**: Player can attract and control massive particle swarms
+- **Boost System**: Dual-gauge system for enhanced particle attraction and movement speed
+- **Dynamic Combat**: Use particles as weapons to defeat various enemy types
+- **Boss Battles**: Multi-phase boss encounters at stages 6 and 10
 
-- **WASD 키**: 플레이어 이동 (방향키와 함께 작동)
-- **방향키**: 플레이어 이동
-- **스페이스바**: 누르고 있으면 입자들이 플레이어에게 더 강하게 끌려옵니다.
+### Enemy Variety
+- **16 Unique Enemy Types**: Each with distinct behaviors and visual styles
+  - Basic, Tracker, Speedy, Splitter, Orbiter
+  - Teleporter, Repulsor, Cluster, Blackhole
+  - Shield Generator, Bomber, Snake (Head/Segment)
+  - Boss enemies including Nightmare Lord and Final Boss
 
-## 기술적 구현
+### Visual Effects
+- **Explosion System**: Dynamic particle-based explosion effects
+- **Color-coded Feedback**: Visual indicators for enemy health, damage, and special states
+- **Screen Effects**: Impact feedback and stage transition effects
 
-- **물리 시뮬레이션**: 입자들은 플레이어에게 끌려오며, 마찰력에 의해 속도가 감소합니다.
-- **충돌 감지**: Raylib의 `CheckCollisionCircles` 함수를 사용하여 입자와 적 사이의 충돌을 감지합니다.
-- **파티클 효과**: 적이 사라질 때 폭발 효과를 위한 파티클을 생성합니다.
-- **동적 메모리 관리**: 적과 파티클을 효율적으로 관리하기 위해 동적 메모리 할당을 사용합니다.
+### Technical Features
+- **Efficient Collision Detection**: Batch processing and spatial optimization
+- **Scalable Event System**: Easily extensible architecture for new features
+- **Performance Monitoring**: Built-in debugging and performance tracking tools
+- **Save System**: Automatic score tracking and leaderboard
 
-## 프로젝트 구조
+## Dependencies
 
-```
-├── src/
-│   ├── main.c              # 메인 진입점
-│   ├── core/
-│   │   ├── game.c          # 게임 로직
-│   │   └── game.h          # 게임 구조체 및 함수 선언
-│   └── entities/
-│       ├── player.c        # 플레이어 관련 기능
-│       ├── player.h        # 플레이어 구조체 및 함수 선언
-│       ├── enemy.c         # 적 관련 기능
-│       ├── enemy.h         # 적 구조체 및 함수 선언
-│       ├── particle.c      # 입자 관련 기능
-│       └── particle.h      # 입자 구조체 및 함수 선언
-├── bin/                    # 빌드된 실행 파일
-├── assets/                 # 리소스 파일(필요 시)
-├── Makefile                # 빌드 스크립트
-└── README.md               # 프로젝트 설명
-```
+### Required
+- **Operating System**: macOS, Windows, or Linux
+- **Raylib**: Version 5.5 or higher
+- **Compiler**: GCC 9.0+ or compatible C compiler
+- **Build System**: GNU Make
 
-## 빌드 및 실행 방법
+### Development Tools
+- **Git**: For version control
+- **Text Editor/IDE**: Any C-compatible editor
 
-### 요구 사항
+## Setup Steps
 
-- macOS(또는 다른 OS)
-- Raylib 5.5 이상
-- GCC 또는 호환 가능한 컴파일러
+### 1. Install Raylib
 
-### 빌드 방법
-
+#### macOS (using Homebrew)
 ```bash
-# 프로젝트 빌드
+brew install raylib
+```
+
+#### macOS (from source)
+```bash
+git clone https://github.com/raysan5/raylib.git
+cd raylib/src
+make
+sudo make install
+```
+
+#### Linux (Ubuntu/Debian)
+```bash
+sudo apt update
+sudo apt install libasound2-dev libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev
+git clone https://github.com/raysan5/raylib.git
+cd raylib/src
+make
+sudo make install
+```
+
+#### Windows
+- Download pre-compiled binaries from [Raylib releases](https://github.com/raysan5/raylib/releases)
+- Or use MinGW:
+```bash
+git clone https://github.com/raysan5/raylib.git
+cd raylib/src
+mingw32-make
+```
+
+### 2. Clone the Repository
+```bash
+git clone https://github.com/NAMYUNWOO/particles.git
+cd particles
+```
+
+### 3. Build the Project
+```bash
+# Clean any previous builds
+make clean
+
+# Build the project
 make
 
-# 프로젝트 실행
+# Run the game
 make run
 
-# 빌드 파일 정리
-make clean
+# Or do everything in one command
+make clean && make && make run
 ```
 
-## 라이센스
+### 4. Verify Installation
+If the build is successful, you should see:
+- `bin/game` executable created
+- No compilation errors
+- Game window opens when running `make run`
 
-이 프로젝트는 MIT 라이센스 하에 배포됩니다.
+## Troubleshooting
 
-## 향후 계획
+### Common Build Issues
 
-- 더 다양한 적 유형 추가
-- 플레이어 능력치 향상 시스템
-- 레벨 시스템
-- 더 다양한 파티클 효과
+#### "raylib.h not found"
+- Ensure Raylib is properly installed
+- Check include paths in Makefile
+- On macOS with Homebrew: `export CPATH=/opt/homebrew/include:$CPATH`
+
+#### Linking errors
+- Verify Raylib libraries are in the system path
+- Check library paths in Makefile
+- On Linux, you may need to run: `sudo ldconfig`
+
+#### Performance issues
+- Ensure you're building in release mode
+- Check that your system meets minimum requirements
+- Try reducing particle count in `src/entities/particle.h` if needed
+
+## Quick Start
+
+After successful setup:
+1. Run the game with `make run` or `./bin/game`
+2. Use WASD or arrow keys to move
+3. Hold Space to boost particle attraction
+4. Hold Left Shift to boost movement speed
+5. Survive through all 10 stages!
+
+## License
+
+This project is distributed under the MIT License. See LICENSE file for details.

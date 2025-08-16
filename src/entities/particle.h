@@ -15,8 +15,12 @@ Particle InitParticle(int screenWidth, int screenHeight);
 
 // Particle physics functions
 void AttractParticle(Particle* particle, Vector2 target, float force);
+void AttractParticleToroidal(Particle* particle, Vector2 target, float force, int screenWidth, int screenHeight);
 void ApplyFriction(Particle* particle, float frictionCoeff);
 void MoveParticle(Particle* particle, int screenWidth, int screenHeight);
+
+// Helper functions
+Vector2 GetToroidalDirection(Vector2 from, Vector2 to, int screenWidth, int screenHeight, float* outDistance);
 
 // Particle rendering
 void DrawParticlePixel(Particle particle);
