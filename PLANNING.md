@@ -21,6 +21,8 @@ make clean && make && make run
 
 **Particle Storm** is a physics-based particle simulation game built with Raylib 5.5, featuring 100,000 particles, event-driven architecture, and 10 progressively challenging stages with unique enemy types and boss battles.
 
+- Raylib context7 latest doc: `upstash-context-7-mcp get-library-docs /raysan5/raylib`
+
 ### Core Features
 - **100,000 Particles**: Real-time physics simulation with attraction mechanics
 - **Event-Driven Architecture**: Decoupled components using publish-subscribe pattern

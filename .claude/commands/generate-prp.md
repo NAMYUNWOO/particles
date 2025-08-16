@@ -9,14 +9,16 @@ The AI agent only gets the context you are appending to the PRP and training dat
 ## Research Process
 
 1. **Codebase Analysis**
+   - Use context7 mcp `upstash-context-7-mcp - get-library-docs raysan5/raylib {your question}` 
    - Search for similar features/patterns in the codebase
-   - Search for features/patterns in `examples\`
+   - Search for features/patterns in `examples/`
    - Identify files to reference in PRP
    - Note existing conventions to follow
    - Check test patterns for validation approach
    
 
 3. **External Research**
+   - Raylib context7 latest doc: `upstash-context-7-mcp get-library-docs /raysan5/raylib`
    - Raylib documentation: https://github.com/raysan5/raylib/wiki/
    - Raylib Cheatsheet: https://www.raylib.com/cheatsheet/cheatsheet.html
    - Search for similar features/patterns online
