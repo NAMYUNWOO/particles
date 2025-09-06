@@ -44,39 +44,6 @@ float GetParticleDistance(Particle particle, Vector2 otherPos) {
     return sqrt((dx*dx) + (dy*dy));
 }
 
-// 토로이달 토폴로지를 고려한 최단 거리 및 방향 계산
-Vector2 GetToroidalDirection(Vector2 from, Vector2 to, int screenWidth, int screenHeight, float* outDistance) {
-    // 직접 경로
-    float dx = to.x - from.x;
-    float dy = to.y - from.y;
-    
-    // X축 방향으로 화면 경계를 통과하는 경우
-    float dx_wrap_left = to.x - (from.x - screenWidth);   // 왼쪽 경계 통과
-    float dx_wrap_right = to.x - (from.x + screenWidth);  // 오른쪽 경계 통과
-    
-    // Y축 방향으로 화면 경계를 통과하는 경우
-    float dy_wrap_up = to.y - (from.y - screenHeight);    // 위쪽 경계 통과
-    float dy_wrap_down = to.y - (from.y + screenHeight);  // 아래쪽 경계 통과
-    
-    // 최단 거리 선택
-    if (fabs(dx_wrap_left) < fabs(dx)) dx = dx_wrap_left;
-    if (fabs(dx_wrap_right) < fabs(dx)) dx = dx_wrap_right;
-    if (fabs(dy_wrap_up) < fabs(dy)) dy = dy_wrap_up;
-    if (fabs(dy_wrap_down) < fabs(dy)) dy = dy_wrap_down;
-    
-    // 거리 계산
-    float distance = sqrt(dx*dx + dy*dy);
-    if (outDistance) *outDistance = distance;
-    
-    // 정규화된 방향 벡터
-    Vector2 direction = {0, 0};
-    if (distance > 0.0f) {
-        direction.x = dx / distance;
-        direction.y = dy / distance;
-    }
-    
-    return direction;
-}
 
 // 파티클에서 지정 위치까지의 방향 벡터 구하기
 Vector2 GetParticleNormal(Particle particle, Vector2 otherPos) {
@@ -93,7 +60,7 @@ Vector2 GetParticleNormal(Particle particle, Vector2 otherPos) {
     return normal;
 }
 
-// 파티클을 특정 위치로 끌어당기기 (기존 방식)
+// 파티클을 특정 위치로 끌어당기기
 void AttractParticle(Particle* particle, Vector2 posToAttract, float multiplier) {
     float dist = fmaxf(GetParticleDistance(*particle, posToAttract), 0.5f);
     Vector2 normal = GetParticleNormal(*particle, posToAttract);
@@ -103,18 +70,6 @@ void AttractParticle(Particle* particle, Vector2 posToAttract, float multiplier)
     particle->velocity.y -= normal.y/dist * multiplier;
 }
 
-// 파티클을 특정 위치로 끌어당기기 (토로이달 토폴로지 적용)
-void AttractParticleToroidal(Particle* particle, Vector2 posToAttract, float multiplier, int screenWidth, int screenHeight) {
-    float dist;
-    Vector2 direction = GetToroidalDirection(particle->position, posToAttract, screenWidth, screenHeight, &dist);
-    
-    // 최소 거리 제한
-    dist = fmaxf(dist, 0.5f);
-    
-    // 거리에 반비례하는 인력 적용 (방향은 최단 경로)
-    particle->velocity.x += direction.x / dist * multiplier;
-    particle->velocity.y += direction.y / dist * multiplier;
-}
 
 // 파티클에 마찰 적용
 void ApplyFriction(Particle* particle, float amount) {
@@ -128,15 +83,26 @@ void MoveParticle(Particle* particle, int screenWidth, int screenHeight) {
     particle->position.x += particle->velocity.x;
     particle->position.y += particle->velocity.y;
     
-    // 화면 경계 처리 (화면 끝에 닿으면 반대편에서 나타남)
-    if (particle->position.x < 0)
-        particle->position.x += screenWidth;
-    if (particle->position.x >= screenWidth)
-        particle->position.x -= screenWidth;
-    if (particle->position.y < 0)
-        particle->position.y += screenHeight;
-    if (particle->position.y >= screenHeight)
-        particle->position.y -= screenHeight;
+    // 화면 경계 처리 (벽에 부딪히면 튕김)
+    // X축 경계
+    if (particle->position.x <= 0) {
+        particle->position.x = 0;
+        particle->velocity.x = fabs(particle->velocity.x);  // 양수로 만들어 오른쪽으로 튕김
+    }
+    if (particle->position.x >= screenWidth - 1) {
+        particle->position.x = screenWidth - 1;
+        particle->velocity.x = -fabs(particle->velocity.x);  // 음수로 만들어 왼쪽으로 튕김
+    }
+    
+    // Y축 경계
+    if (particle->position.y <= 0) {
+        particle->position.y = 0;
+        particle->velocity.y = fabs(particle->velocity.y);  // 양수로 만들어 아래로 튕김
+    }
+    if (particle->position.y >= screenHeight - 1) {
+        particle->position.y = screenHeight - 1;
+        particle->velocity.y = -fabs(particle->velocity.y);  // 음수로 만들어 위로 튕김
+    }
 }
 
 // 파티클 그리기 (단일 픽셀)

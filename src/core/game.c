@@ -318,10 +318,14 @@ void UpdateGame(Game* game) {
             if (game->enemies[i].type == ENEMY_TYPE_REPULSOR) {
                 // Apply repulsion to nearby particles
                 for (int p = 0; p < PARTICLE_COUNT; p++) {
-                    float dist;
-                    Vector2 repulseDir = GetToroidalDirection(game->enemies[i].position,
-                                                              game->particles[p].position,
-                                                              game->screenWidth, game->screenHeight, &dist);
+                    float dx = game->particles[p].position.x - game->enemies[i].position.x;
+                    float dy = game->particles[p].position.y - game->enemies[i].position.y;
+                    float dist = sqrtf(dx*dx + dy*dy);
+                    Vector2 repulseDir = {0, 0};
+                    if (dist > 0.0f) {
+                        repulseDir.x = dx / dist;
+                        repulseDir.y = dy / dist;
+                    }
                     if (dist < REPULSE_RADIUS && dist > 1.0f) {
                         // Invert direction for repulsion
                         repulseDir.x = -repulseDir.x;
@@ -366,10 +370,14 @@ void UpdateGame(Game* game) {
                     #define PULSE_RADIUS 400.0f
                     #define PULSE_FORCE 20.0f
                     for (int p = 0; p < PARTICLE_COUNT; p++) {
-                        float dist;
-                        Vector2 pulseDir = GetToroidalDirection(game->enemies[i].position,
-                                                               game->particles[p].position,
-                                                               game->screenWidth, game->screenHeight, &dist);
+                        float dx = game->particles[p].position.x - game->enemies[i].position.x;
+                        float dy = game->particles[p].position.y - game->enemies[i].position.y;
+                        float dist = sqrtf(dx*dx + dy*dy);
+                        Vector2 pulseDir = {0, 0};
+                        if (dist > 0.0f) {
+                            pulseDir.x = dx / dist;
+                            pulseDir.y = dy / dist;
+                        }
                         if (dist < PULSE_RADIUS && dist > 1.0f) {
                             // Push particles away from blackhole center (invert direction)
                             pulseDir.x = -pulseDir.x;
@@ -418,10 +426,14 @@ void UpdateGame(Game* game) {
                         
                         
                         for (int p = 0; p < PARTICLE_COUNT; p++) {
-                            float dist;
-                            Vector2 repelDir = GetToroidalDirection(game->enemies[i].position,
-                                                                    game->particles[p].position,
-                                                                    game->screenWidth, game->screenHeight, &dist);
+                            float dx = game->particles[p].position.x - game->enemies[i].position.x;
+                            float dy = game->particles[p].position.y - game->enemies[i].position.y;
+                            float dist = sqrtf(dx*dx + dy*dy);
+                            Vector2 repelDir = {0, 0};
+                            if (dist > 0.0f) {
+                                repelDir.x = dx / dist;
+                                repelDir.y = dy / dist;
+                            }
                             if (dist < SEMI_STORM_RADIUS && dist > 1.0f) {
                                 // 70% chance to repel each particle when storm is active
                                 if (GetRandomValue(1, 10) <= 7) {
@@ -442,10 +454,14 @@ void UpdateGame(Game* game) {
                     #define BLACKHOLE_RADIUS 200.0f
                     #define BLACKHOLE_FORCE 5.0f
                     for (int p = 0; p < PARTICLE_COUNT; p++) {
-                        float dist;
-                        Vector2 attractDir = GetToroidalDirection(game->particles[p].position, 
-                                                                  game->enemies[i].position,
-                                                                  game->screenWidth, game->screenHeight, &dist);
+                        float dx = game->enemies[i].position.x - game->particles[p].position.x;
+                        float dy = game->enemies[i].position.y - game->particles[p].position.y;
+                        float dist = sqrtf(dx*dx + dy*dy);
+                        Vector2 attractDir = {0, 0};
+                        if (dist > 0.0f) {
+                            attractDir.x = dx / dist;
+                            attractDir.y = dy / dist;
+                        }
                         if (dist < BLACKHOLE_RADIUS && dist > game->enemies[i].radius) {
                             float attractForce = (1.0f - dist / BLACKHOLE_RADIUS) * BLACKHOLE_FORCE;
                             game->particles[p].velocity.x += attractDir.x * attractForce;
