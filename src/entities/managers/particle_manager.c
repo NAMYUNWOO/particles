@@ -12,11 +12,9 @@ void UpdateAllParticles(Game* game, bool isSpacePressed) {
         };
         
         if (isSpacePressed) {
-            AttractParticleToroidal(&game->particles[i], playerCenter, BOOSTED_ATTRACTION_FORCE, 
-                                   game->screenWidth, game->screenHeight);
+            AttractParticle(&game->particles[i], playerCenter, BOOSTED_ATTRACTION_FORCE);
         } else {
-            AttractParticleToroidal(&game->particles[i], playerCenter, DEFAULT_ATTRACTION_FORCE,
-                                   game->screenWidth, game->screenHeight);
+            AttractParticle(&game->particles[i], playerCenter, DEFAULT_ATTRACTION_FORCE);
         }
         
         // 마찰 적용 (0.99 = 약간의 감속)
