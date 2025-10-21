@@ -137,6 +137,32 @@ After successful setup:
 4. Hold Left Shift to boost movement speed
 5. Survive through all 10 stages!
 
+## Web Build (Play in Browser)
+
+Particle Storm can be compiled to WebAssembly and played in your web browser!
+
+**Quick Start:**
+```bash
+# 1. Install Emscripten
+brew install emscripten  # macOS
+
+# 2. Download Raylib for WebAssembly
+wget https://github.com/raysan5/raylib/releases/download/5.0/raylib-5.0_webassembly.zip
+unzip raylib-5.0_webassembly.zip -d raylib-wasm
+
+# 3. Build for web
+make -f Makefile.web
+
+# 4. Run local server
+make -f Makefile.web serve
+
+# 5. Open http://localhost:8000/particle_storm.html
+```
+
+**Full Instructions**: See [WEB_BUILD_GUIDE.md](WEB_BUILD_GUIDE.md) for complete setup and deployment guide.
+
+**Performance Note**: Web version runs at ~50-60% native speed. Recommended to reduce particle count to 50,000 for smooth 60 FPS gameplay in browser.
+
 ## License
 
 This project is distributed under the MIT License. See LICENSE file for details.
