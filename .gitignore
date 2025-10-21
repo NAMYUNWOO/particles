@@ -17,7 +17,14 @@ game
 *.dSYM/
 
 # macOS specific
-.DS_Store 
+.DS_Store
 
 # examples
 /examples
+
+# Web build artifacts
+build/
+raylib-wasm/
+*.wasm
+*.js
+*.html.mem

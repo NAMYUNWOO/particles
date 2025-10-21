@@ -1,0 +1,89 @@
+# Makefile for Raylib WebAssembly Build
+# Requires Emscripten SDK (emsdk)
+
+# Emscripten compiler
+CC := emcc
+
+# Compiler flags for web
+CFLAGS := -Wall -std=c99 -D_DEFAULT_SOURCE -DPLATFORM_WEB
+
+# Directories
+SRC_DIR      := src
+CORE_DIR     := $(SRC_DIR)/core
+ENTITIES_DIR := $(SRC_DIR)/entities
+MANAGERS_DIR := $(ENTITIES_DIR)/managers
+ITEMS_DIR    := $(ENTITIES_DIR)/items
+WEB_DIR      := build/web
+
+# Source files (same as desktop)
+SRC_FILES := \
+	$(SRC_DIR)/main.c \
+	$(CORE_DIR)/game.c \
+	$(CORE_DIR)/physics.c \
+	$(CORE_DIR)/input_handler.c \
+	$(CORE_DIR)/memory_pool.c \
+	$(CORE_DIR)/event/event_system.c \
+	$(ENTITIES_DIR)/player.c \
+	$(ENTITIES_DIR)/particle.c \
+	$(ENTITIES_DIR)/enemy.c \
+	$(ENTITIES_DIR)/explosion.c \
+	$(ITEMS_DIR)/hp_potion.c \
+	$(MANAGERS_DIR)/enemy_manager.c \
+	$(MANAGERS_DIR)/particle_manager.c \
+	$(MANAGERS_DIR)/stage_manager.c \
+	$(MANAGERS_DIR)/item_manager.c
+
+# Raylib for WebAssembly
+# Download from: https://github.com/raysan5/raylib/releases/download/5.0/raylib-5.0_webassembly.zip
+RAYLIB_WEB_PATH := raylib-wasm
+INCLUDE_PATHS   := -I$(RAYLIB_WEB_PATH)/include -I./src
+
+# Emscripten linker flags
+LDFLAGS := \
+	-L$(RAYLIB_WEB_PATH)/lib \
+	-lraylib \
+	-s USE_GLFW=3 \
+	-s ASYNCIFY \
+	-s WASM=1 \
+	-s GL_ENABLE_GET_PROC_ADDRESS=1 \
+	-s ASSERTIONS=1 \
+	-s ALLOW_MEMORY_GROWTH=1 \
+	-s TOTAL_MEMORY=67108864 \
+	--shell-file $(RAYLIB_WEB_PATH)/shell.html
+
+# Output files
+OUTPUT_NAME := particle_storm
+
+# Default target
+all: $(WEB_DIR)/$(OUTPUT_NAME).html
+
+# Build for web
+$(WEB_DIR)/$(OUTPUT_NAME).html: $(SRC_FILES)
+	@mkdir -p $(WEB_DIR)
+	@echo "Compiling for WebAssembly..."
+	$(CC) $(CFLAGS) $(INCLUDE_PATHS) -o $@ $(SRC_FILES) $(LDFLAGS)
+	@echo ""
+	@echo "✅ Web build complete!"
+	@echo ""
+	@echo "Output files:"
+	@echo "  - $(WEB_DIR)/$(OUTPUT_NAME).html"
+	@echo "  - $(WEB_DIR)/$(OUTPUT_NAME).wasm"
+	@echo "  - $(WEB_DIR)/$(OUTPUT_NAME).js"
+	@echo ""
+	@echo "To run locally:"
+	@echo "  cd $(WEB_DIR) && python3 -m http.server 8000"
+	@echo "  Then open: http://localhost:8000/$(OUTPUT_NAME).html"
+	@echo ""
+
+# Clean target
+clean:
+	rm -rf $(WEB_DIR)
+	@echo "Clean complete"
+
+# Serve the web build
+serve:
+	@echo "Starting web server on http://localhost:8000"
+	@echo "Open: http://localhost:8000/$(OUTPUT_NAME).html"
+	@cd $(WEB_DIR) && python3 -m http.server 8000
+
+.PHONY: all clean serve
