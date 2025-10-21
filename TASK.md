@@ -12,4 +12,4 @@
 - Particles should bounce off walls like enemies do
 - Remove toroidal distance calculations and functions
 - Maintain performance with 100,000 particles
-- PRP: PRPs/remove-toroidal-world.md
+- PRP: PRPs/remove-toroidal-world.md주인공크기를 다양하게 하는 작엄 
