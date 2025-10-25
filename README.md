@@ -8,7 +8,7 @@ A physics-based particle simulation game built with Raylib, featuring 100,000 in
 - **100,000 Real-time Particles**: Physics-based particle simulation with attraction mechanics
 - **10 Progressive Stages**: Each stage introduces new enemy types and challenges
 - **Event-Driven Architecture**: Decoupled component system using publish-subscribe pattern
-- **Memory Pool Optimization**: High-performance memory management for smooth gameplay
+- **Memory Pool Optimization**: High-performance memory management for smooth gameplay.
 
 ### Game Mechanics
 - **Particle Attraction System**: Player can attract and control massive particle swarms
