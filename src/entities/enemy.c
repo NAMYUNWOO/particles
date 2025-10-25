@@ -5,6 +5,7 @@
 #include <string.h>
 #include "raymath.h"
 #include "../core/game.h"  // For global screen dimensions
+#include "../core/gravity_system.h"  // Gravity system integration
 
 static float LerpFloat(float a, float b, float t);
 
@@ -24,6 +25,7 @@ Enemy InitEnemyByType(EnemyType type, int screenWidth, int screenHeight, Vector2
     enemy.stateData.phase = 0;
     enemy.stateData.phaseTimer = 0.0f;
     enemy.stateFlags = ENEMY_STATE_NONE;  // Initialize to no state flags
+    enemy.gravitySourceId = 0;  // No gravity source initially
     
     // Type-specific initialization
     switch (type) {
@@ -606,6 +608,59 @@ void UpdateEnemy(Enemy* enemy, int screenWidth, int screenHeight, float deltaTim
         if (enemy->position.y > screenHeight + margin) {
             enemy->position.y = screenHeight + margin;
             enemy->velocity.y *= -1;
+        }
+    }
+
+    // Gravity system integration - BLACKHOLE
+    if (enemy->type == ENEMY_TYPE_BLACKHOLE) {
+        bool shouldHaveGravity = HasState(enemy->stateFlags, ENEMY_STATE_INVULNERABLE) &&
+                                 !HasState(enemy->stateFlags, ENEMY_STATE_PULSED);
+
+        if (shouldHaveGravity) {
+            if (enemy->gravitySourceId == 0) {
+                // Register new gravity source
+                GravitySource source = {
+                    .position = enemy->position,
+                    .radius = 200.0f,          // BLACKHOLE_RADIUS
+                    .strength = 5.0f,          // BLACKHOLE_FORCE
+                    .type = GRAVITY_TYPE_ATTRACTION,
+                    .active = true,
+                    .sourcePtr = enemy,
+                    .sourceType = 0,  // Enemy
+                    .sourceId = 0     // Will be assigned
+                };
+                enemy->gravitySourceId = RegisterGravitySource(source);
+            } else {
+                // Update existing source position
+                UpdateGravitySource(enemy->gravitySourceId, enemy->position);
+            }
+        } else {
+            // Remove gravity source if conditions no longer met
+            if (enemy->gravitySourceId != 0) {
+                UnregisterGravitySource(enemy->gravitySourceId);
+                enemy->gravitySourceId = 0;
+            }
+        }
+    }
+
+    // Gravity system integration - REPULSOR
+    if (enemy->type == ENEMY_TYPE_REPULSOR) {
+        if (enemy->gravitySourceId == 0) {
+            // Register repulsion source
+            GravitySource source = {
+                .position = enemy->position,
+                .radius = 150.0f,          // REPULSE_RADIUS
+                .strength = 2.0f,          // Repulsion strength
+                .type = GRAVITY_TYPE_REPULSION,
+                .active = true,
+                .sourcePtr = enemy,
+                .sourceType = 0,
+                .sourceId = 0
+            };
+            enemy->gravitySourceId = RegisterGravitySource(source);
+        } else {
+            // Update position
+            UpdateGravitySource(enemy->gravitySourceId, enemy->position);
         }
     }
 }

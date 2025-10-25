@@ -10,6 +10,7 @@
 #include "event/event_system.h"
 #include "event/event_types.h"
 #include "memory_pool.h"
+#include "gravity_system.h"
 #include "../entities/managers/stage_manager.h"
 
 #define SCOREBOARD_FILENAME "scoreboard.txt"
@@ -45,7 +46,10 @@ Game InitGame(int screenWidth, int screenHeight) {
     
     // 물리 시스템 메모리 풀 초기화
     InitPhysicsMemoryPools();
-    
+
+    // 중력 시스템 초기화
+    InitGravitySystem();
+
     // 추가 메모리 풀 초기화 (한 번만)
     if (!g_additionalPoolsInitialized) {
         MemoryPool_Init(&g_stageChangeEventPool, sizeof(StageChangeEventData), 32);
@@ -172,6 +176,9 @@ void UpdateGame(Game* game) {
 
         // Update enemies
         UpdateAllEnemies(game);
+
+        // Apply gravity from all registered sources to particles
+        ApplyAllGravitySources(game, game->deltaTime);
 
         // Handle collisions
         ProcessEnemyCollisions(game);
@@ -338,29 +345,9 @@ void UpdateGame(Game* game) {
             UpdateEnemyAI(&game->enemies[i], game->player.position, game->deltaTime);
             UpdateEnemyMovement(&game->enemies[i], game->player.position, game->deltaTime);
             UpdateEnemy(&game->enemies[i], game->screenWidth, game->screenHeight, game->deltaTime);
-            
-            // Apply special field effects
-            if (game->enemies[i].type == ENEMY_TYPE_REPULSOR) {
-                // Apply repulsion to nearby particles
-                for (int p = 0; p < PARTICLE_COUNT; p++) {
-                    float dx = game->particles[p].position.x - game->enemies[i].position.x;
-                    float dy = game->particles[p].position.y - game->enemies[i].position.y;
-                    float dist = sqrtf(dx*dx + dy*dy);
-                    Vector2 repulseDir = {0, 0};
-                    if (dist > 0.0f) {
-                        repulseDir.x = dx / dist;
-                        repulseDir.y = dy / dist;
-                    }
-                    if (dist < REPULSE_RADIUS && dist > 1.0f) {
-                        // Invert direction for repulsion
-                        repulseDir.x = -repulseDir.x;
-                        repulseDir.y = -repulseDir.y;
-                        float repulseForce = (1.0f - dist / REPULSE_RADIUS) * 2.0f;
-                        game->particles[p].velocity.x += repulseDir.x * repulseForce;
-                        game->particles[p].velocity.y += repulseDir.y * repulseForce;
-                    }
-                }
-            } else if (game->enemies[i].type == ENEMY_TYPE_BLACKHOLE) {
+
+            // BLACKHOLE special behavior
+            if (game->enemies[i].type == ENEMY_TYPE_BLACKHOLE) {
                 // Check if other enemies exist
                 int otherEnemiesCount = 0;
                 for (int j = 0; j < game->enemyCount; j++) {
@@ -474,32 +461,12 @@ void UpdateGame(Game* game) {
                         }
                     }
                 }
-                
-                // Only apply gravity if still has invulnerability and hasn't pulsed yet
-                if (HasState(game->enemies[i].stateFlags, ENEMY_STATE_INVULNERABLE) &&
-                    !HasState(game->enemies[i].stateFlags, ENEMY_STATE_PULSED)) {
-                    // Apply strong attraction to nearby particles
-                    #define BLACKHOLE_RADIUS 200.0f
-                    #define BLACKHOLE_FORCE 5.0f
-                    for (int p = 0; p < PARTICLE_COUNT; p++) {
-                        float dx = game->enemies[i].position.x - game->particles[p].position.x;
-                        float dy = game->enemies[i].position.y - game->particles[p].position.y;
-                        float dist = sqrtf(dx*dx + dy*dy);
-                        Vector2 attractDir = {0, 0};
-                        if (dist > 0.0f) {
-                            attractDir.x = dx / dist;
-                            attractDir.y = dy / dist;
-                        }
-                        if (dist < BLACKHOLE_RADIUS && dist > game->enemies[i].radius) {
-                            float attractForce = (1.0f - dist / BLACKHOLE_RADIUS) * BLACKHOLE_FORCE;
-                            game->particles[p].velocity.x += attractDir.x * attractForce;
-                            game->particles[p].velocity.y += attractDir.y * attractForce;
-                        }
-                    }
-                }
             }
         }
-        
+
+        // Apply gravity from all registered sources to particles
+        ApplyAllGravitySources(game, game->deltaTime);
+
         // Legacy enemy spawn (only if not using stage system)
         if (game->currentStageNumber == 0) {
             SpawnEnemyIfNeeded(game);

@@ -24,6 +24,7 @@ SRC_FILES := \
 	$(CORE_DIR)/physics.c \
 	$(CORE_DIR)/input_handler.c \
 	$(CORE_DIR)/memory_pool.c \
+	$(CORE_DIR)/gravity_system.c \
 	$(CORE_DIR)/dev_test_mode.c \
 	$(CORE_DIR)/event/event_system.c \
 	$(ENTITIES_DIR)/player.c \

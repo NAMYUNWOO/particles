@@ -78,6 +78,9 @@ typedef struct Enemy {
     Vector2 wanderTarget;     // Current wander target position
     float wanderAngle;        // Current wander angle for smooth turning
     float turnSpeed;          // How fast the enemy can turn
+
+    // Gravity system integration
+    int gravitySourceId;      // ID from gravity system (0 = none)
 } Enemy;
 
 // Constants

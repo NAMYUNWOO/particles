@@ -10,6 +10,7 @@
 typedef struct {
     EnemyType selectedEnemyType;  // Currently selected enemy type for spawning
     bool showHelp;                // Whether to show help overlay
+    bool showGravityFields;       // Whether to visualize gravity fields
     int enemiesSpawned;           // Total enemies spawned this session
     int enemiesRemoved;           // Total enemies removed this session
 } TestModeState;

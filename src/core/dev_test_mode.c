@@ -1,5 +1,6 @@
 #include "dev_test_mode.h"
 #include "game.h"
+#include "gravity_system.h"
 #include <raymath.h>
 #include <string.h>
 #include <stdio.h>
@@ -40,6 +41,7 @@ TestModeState InitTestMode(void) {
     TestModeState state = {
         .selectedEnemyType = ENEMY_TYPE_BASIC,
         .showHelp = true,  // Show help on startup
+        .showGravityFields = false,  // Gravity visualization off by default
         .enemiesSpawned = 0,
         .enemiesRemoved = 0
     };
@@ -65,6 +67,11 @@ void HandleTestModeKeyboard(TestModeState* state, void* gamePtr) {
     // Toggle help overlay with F1
     if (IsKeyPressed(KEY_F1)) {
         state->showHelp = !state->showHelp;
+    }
+
+    // Toggle gravity field visualization with G
+    if (IsKeyPressed(KEY_G)) {
+        state->showGravityFields = !state->showGravityFields;
     }
 
     // Clear all enemies with C
@@ -333,6 +340,11 @@ void UpdateTestMode(TestModeState* state, void* gamePtr) {
  * Draw test mode UI
  */
 void DrawTestModeUI(TestModeState* state, int screenWidth, int screenHeight) {
+    // Draw gravity fields if enabled
+    if (state->showGravityFields) {
+        DrawGravityFields(true);  // Show labels
+    }
+
     // Draw enemy selector panel (top-left)
     int panelX = 10;
     int panelY = 100;
@@ -364,22 +376,23 @@ void DrawTestModeUI(TestModeState* state, int screenWidth, int screenHeight) {
 
         DrawText("TEST MODE CONTROLS", helpX + 10, helpY + 10, 16, GREEN);
         DrawText("F1: Toggle Help", helpX + 10, helpY + 35, 14, WHITE);
-        DrawText("TAB: Next Enemy Type", helpX + 10, helpY + 55, 14, YELLOW);
-        DrawText("Shift+TAB: Previous Enemy", helpX + 10, helpY + 75, 14, YELLOW);
-        DrawText("1-9,0: Quick Select (1st-10th)", helpX + 10, helpY + 95, 14, WHITE);
-        DrawText("Left Click: Spawn Enemy", helpX + 10, helpY + 115, 14, WHITE);
-        DrawText("R: Remove Nearest Enemy", helpX + 10, helpY + 135, 14, WHITE);
-        DrawText("C: Clear All Enemies", helpX + 10, helpY + 155, 14, WHITE);
-        DrawText("ESC: Exit Test Mode", helpX + 10, helpY + 175, 14, WHITE);
-        DrawText("", helpX + 10, helpY + 195, 14, WHITE);
-        DrawText("STATE TOGGLE (hover near enemy):", helpX + 10, helpY + 200, 14, SKYBLUE);
-        DrawText("I: Toggle Invulnerability", helpX + 10, helpY + 220, 14, RED);
-        DrawText("S: Toggle Shield", helpX + 10, helpY + 240, 14, SKYBLUE);
-        DrawText("P: Toggle Pulsed (BLACKHOLE)", helpX + 10, helpY + 260, 14, PURPLE);
-        DrawText("", helpX + 10, helpY + 280, 14, WHITE);
-        DrawText("QUICK SELECT:", helpX + 10, helpY + 290, 14, YELLOW);
-        DrawText("1=BASIC  2=TRACKER  3=SPEEDY", helpX + 10, helpY + 310, 12, LIGHTGRAY);
-        DrawText("4=SPLIT  5=ORBIT   6=BOSS", helpX + 10, helpY + 325, 12, LIGHTGRAY);
-        DrawText("7=TELE   8=REPULSE 9=CLUSTER", helpX + 10, helpY + 340, 12, LIGHTGRAY);
+        DrawText("G: Toggle Gravity Fields", helpX + 10, helpY + 55, 14, PURPLE);
+        DrawText("TAB: Next Enemy Type", helpX + 10, helpY + 75, 14, YELLOW);
+        DrawText("Shift+TAB: Previous Enemy", helpX + 10, helpY + 95, 14, YELLOW);
+        DrawText("1-9,0: Quick Select (1st-10th)", helpX + 10, helpY + 115, 14, WHITE);
+        DrawText("Left Click: Spawn Enemy", helpX + 10, helpY + 135, 14, WHITE);
+        DrawText("R: Remove Nearest Enemy", helpX + 10, helpY + 155, 14, WHITE);
+        DrawText("C: Clear All Enemies", helpX + 10, helpY + 175, 14, WHITE);
+        DrawText("ESC: Exit Test Mode", helpX + 10, helpY + 195, 14, WHITE);
+        DrawText("", helpX + 10, helpY + 215, 14, WHITE);
+        DrawText("STATE TOGGLE (hover near enemy):", helpX + 10, helpY + 220, 14, SKYBLUE);
+        DrawText("I: Toggle Invulnerability", helpX + 10, helpY + 240, 14, RED);
+        DrawText("S: Toggle Shield", helpX + 10, helpY + 260, 14, SKYBLUE);
+        DrawText("P: Toggle Pulsed (BLACKHOLE)", helpX + 10, helpY + 280, 14, PURPLE);
+        DrawText("", helpX + 10, helpY + 300, 14, WHITE);
+        DrawText("QUICK SELECT:", helpX + 10, helpY + 310, 14, YELLOW);
+        DrawText("1=BASIC  2=TRACKER  3=SPEEDY", helpX + 10, helpY + 330, 12, LIGHTGRAY);
+        DrawText("4=SPLIT  5=ORBIT   6=BOSS", helpX + 10, helpY + 345, 12, LIGHTGRAY);
+        DrawText("7=TELE   8=REPULSE 9=CLUSTER", helpX + 10, helpY + 360, 12, LIGHTGRAY);
     }
 }
