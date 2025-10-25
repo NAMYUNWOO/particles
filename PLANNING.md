@@ -13,6 +13,14 @@ make run
 # Build and run in one command
 make clean && make && make run
 
+# Test a specific stage (jumps directly to that stage)
+make test-stage-1      # Test Stage 1: Gravitational Anomaly
+make test-stage-6      # Test Stage 6: Boss Battle
+make test-stage-10     # Test Stage 10: Final Boss
+
+# Compile a single stage file for validation
+make compile-stage-3   # Check Stage 3 for compilation errors
+
 # Basic runtime test (runs game for 3 seconds)
 ./test_memory
 ```
@@ -46,13 +54,23 @@ The game uses a publish-subscribe event system for component decoupling:
 10 stages with different enemy types and mechanics:
 
 **Key Files:**
-- `src/entities/managers/stage_manager.c` - Stage definitions and progression
+- `src/entities/managers/stage_manager.c` - Stage progression core logic
 - `src/entities/managers/stage_manager.h` - Stage system interface
+- `src/entities/managers/stages/stage_common.h` - Common interface for all stages
+- `src/entities/managers/stages/stage_N.c` - Individual stage definitions (N = 1-10)
+
+**Stage Modularity:**
+Each stage is now defined in its own file under `src/entities/managers/stages/`. This provides:
+- **Independent Development**: Modify one stage without affecting others
+- **Version Control**: Track changes per-stage with Git
+- **Easy Testing**: Test individual stages with `make test-stage-N`
+- **Clean Code**: Each file is under 200 lines, well-documented
 
 **Important Notes:**
 - Static variables in `ShouldSpawnEnemy()` need reset when restarting (use `ResetSpawnTiming()`)
 - Stage timer starts during STAGE_INTRO phase
 - Each stage has unique enemy composition and wave patterns
+- All stages must implement `Stage CreateStageN(void)` function
 
 ### 3. Memory Pool System
 Critical for performance with 100,000 particles:
@@ -187,10 +205,26 @@ src/
     ├── enemy.c/h            # Enemy base implementation
     ├── particle.c/h         # Particle simulation
     ├── explosion.c/h        # Explosion effects
+    ├── items/
+    │   ├── hp_potion.c/h    # HP potion item
+    │   └── star_item.c/h    # Star collection item
     └── managers/
         ├── enemy_manager.c/h    # Enemy spawning/AI
         ├── particle_manager.c/h # Particle management
-        └── stage_manager.c/h    # Stage progression
+        ├── item_manager.c/h     # Item spawning/collection
+        ├── stage_manager.c/h    # Stage progression core
+        └── stages/              # Individual stage definitions
+            ├── stage_common.h   # Common stage interface
+            ├── stage_1.c        # Stage 1: Gravitational Anomaly
+            ├── stage_2.c        # Stage 2: The Hunt Begins
+            ├── stage_3.c        # Stage 3: Speed Demons
+            ├── stage_4.c        # Stage 4: Divide and Conquer
+            ├── stage_5.c        # Stage 5: Orbital Mechanics
+            ├── stage_6.c        # Stage 6: Guardian (Boss)
+            ├── stage_7.c        # Stage 7: Quantum Flux
+            ├── stage_8.c        # Stage 8: Magnetic Storm
+            ├── stage_9.c        # Stage 9: Chain Reaction
+            └── stage_10.c       # Stage 10: Final Boss
 ```
 
 ## Performance Monitoring
@@ -273,6 +307,64 @@ src/
 3. **Memory pool fragmentation**: Long play sessions may experience degraded performance
 4. **Teleporter timing**: Teleport animations sometimes overlap
 
+## Stage Development Workflow
+
+### Working on Stages
+
+Each stage can be developed independently following this workflow:
+
+1. **Create a feature branch:**
+   ```bash
+   git checkout -b stage/stage-3-balance-update
+   ```
+
+2. **Edit the stage file:**
+   ```bash
+   # Edit src/entities/managers/stages/stage_3.c
+   ```
+
+3. **Test your changes:**
+   ```bash
+   make compile-stage-3  # Check compilation
+   make test-stage-3     # Playtest your stage
+   ```
+
+4. **Commit with clear messages:**
+   ```bash
+   git commit -m "Stage 3: Reduce speedy enemy health from 1.2x to 1.0x
+
+   The stage was too difficult for new players based on playtesting.
+   This change makes the fast enemies easier to destroy while
+   maintaining the speed challenge."
+   ```
+
+5. **Push and create PR:**
+   ```bash
+   git push origin stage/stage-3-balance-update
+   ```
+
+### Documentation
+
+See detailed guides in `.github/`:
+- **STAGE_WORKFLOW.md**: Git branching strategy and PR process
+- **STAGE_DEVELOPMENT.md**: Complete guide to creating/modifying stages
+
+### Quick Reference
+
+```bash
+# Test a stage
+make test-stage-N
+
+# Compile just one stage
+make compile-stage-N
+
+# Build everything
+make clean && make
+
+# Run full game
+make run
+```
+
 ## Contributing
 
 When contributing to this project:
@@ -280,4 +372,5 @@ When contributing to this project:
 2. Add appropriate event handlers for new features
 3. Use memory pools for dynamic allocations
 4. Test with 100,000 particles for performance
-5. Update this documentation for significant changes
+5. For stage changes, see `.github/STAGE_WORKFLOW.md`
+6. Update this documentation for significant changes

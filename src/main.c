@@ -4,11 +4,31 @@
 #include "core/input_handler.h"
 #include "entities/managers/stage_manager.h"
 #include <stdlib.h>
+#include <string.h>
 
 // RegisterEnemyEventHandlers 함수 선언
 void RegisterEnemyEventHandlers(void);
 
-int main(void)
+/**
+ * Parse command line arguments for starting stage
+ *
+ * @param argc Argument count
+ * @param argv Argument values
+ * @return Starting stage number (0 = normal game, 1-10 = jump to stage)
+ */
+int ParseStartingStage(int argc, char *argv[]) {
+    for (int i = 1; i < argc - 1; i++) {
+        if (strcmp(argv[i], "--start-stage") == 0) {
+            int stage = atoi(argv[i + 1]);
+            if (stage >= 1 && stage <= 10) {
+                return stage;
+            }
+        }
+    }
+    return 0;  // Normal game start
+}
+
+int main(int argc, char *argv[])
 {
     const int screenWidth = 800;
     const int screenHeight = 800;
@@ -16,14 +36,39 @@ int main(void)
     InitWindow(screenWidth, screenHeight, "Particle Storm - 10 Stages");
     SetTargetFPS(60);
 
+    // Parse command-line arguments for stage selection
+    int startingStage = ParseStartingStage(argc, argv);
+
     // 이벤트 시스템 초기화
     InitEventSystem();
     
     // 스테이지 매니저 초기화
     InitStageManager();
-    
+
     Game game = InitGame(screenWidth, screenHeight);
-    
+
+    // Jump to specific stage if requested (for testing)
+    if (startingStage > 0) {
+        game.currentStageNumber = startingStage - 1;  // Will be incremented to startingStage
+        game.gameState = GAME_STATE_STAGE_INTRO;
+        // Load the requested stage
+        switch(startingStage) {
+            case 1: game.currentStage = CreateStage1(); break;
+            case 2: game.currentStage = CreateStage2(); break;
+            case 3: game.currentStage = CreateStage3(); break;
+            case 4: game.currentStage = CreateStage4(); break;
+            case 5: game.currentStage = CreateStage5(); break;
+            case 6: game.currentStage = CreateStage6(); break;
+            case 7: game.currentStage = CreateStage7(); break;
+            case 8: game.currentStage = CreateStage8(); break;
+            case 9: game.currentStage = CreateStage9(); break;
+            case 10: game.currentStage = CreateStage10(); break;
+        }
+        game.currentStage.state = STAGE_STATE_INTRO;
+        game.currentStage.stateTimer = 0.0f;
+        ResetSpawnTiming();
+    }
+
     // 이벤트 시스템 사용 시 입력 핸들러와 충돌 핸들러 등록
     if (game.useEventSystem) {
         // 적 이벤트 샘플 핸들러 등록

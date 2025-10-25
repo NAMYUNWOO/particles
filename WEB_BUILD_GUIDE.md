@@ -2,6 +2,29 @@
 
 This guide explains how the WebAssembly version of Particle Storm is built and deployed using GitHub Actions.
 
+## 🎮 Stage Testing on GitHub Pages
+
+The web version now supports **stage selection** via dropdown menu!
+
+Visit: **https://namyunwoo.github.io/particles/**
+
+### How to Test Stages
+
+1. Open the web version in your browser
+2. Use the **"Select Stage"** dropdown to choose:
+   - **Full Game** - Play all 10 stages from the beginning
+   - **Stage 1-10** - Jump directly to any specific stage
+
+3. The page will reload and start at your selected stage
+
+### URL Parameters
+
+You can also link directly to a specific stage:
+- Full game: `https://namyunwoo.github.io/particles/`
+- Stage 3: `https://namyunwoo.github.io/particles/?stage=3`
+- Stage 6 (Boss): `https://namyunwoo.github.io/particles/?stage=6`
+- Stage 10 (Final Boss): `https://namyunwoo.github.io/particles/?stage=10`
+
 ## 🚀 Automatic Deployment (Recommended)
 
 The project uses **GitHub Actions** for automatic CI/CD deployment to GitHub Pages.
@@ -16,11 +39,12 @@ The project uses **GitHub Actions** for automatic CI/CD deployment to GitHub Pag
 2. **GitHub Actions automatically**:
    - Installs Emscripten SDK
    - Extracts Raylib WebAssembly library
-   - Builds optimized WASM version
+   - Builds optimized WASM version with all 10 stages
    - Deploys to GitHub Pages
 
-3. **Play the game**:
+3. **Test the game**:
    - Visit: https://namyunwoo.github.io/particles/
+   - Select any stage from the dropdown
 
 ### Viewing Build Status
 
@@ -67,7 +91,7 @@ source ./emsdk_env.sh  # Add to ~/.bashrc or ~/.zshrc
 ### Building Locally
 
 ```bash
-# Build
+# Build with all stages
 make -f Makefile.web
 
 # Run local web server
@@ -76,7 +100,14 @@ python3 -m http.server 8000
 
 # Open in browser:
 # http://localhost:8000/particle_storm.html
+
+# Test specific stages locally:
+# Full game: http://localhost:8000/particle_storm.html
+# Stage 3:   http://localhost:8000/particle_storm.html?stage=3
+# Stage 6:   http://localhost:8000/particle_storm.html?stage=6
 ```
+
+The dropdown selector will work in local builds too!
 
 ## 📋 Build Configuration
 

@@ -1,8 +1,11 @@
 {
   "mcpServers": {
-    "upstash-context-7-mcp": {
+    "context7": {
       "type": "http",
-      "url": "https://server.smithery.ai/@upstash/context7-mcp/mcp"
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "ctx7sk-2ae0e003-1927-4f46-b42e-068cfb6f3016"
+      }
     }
   }
 }

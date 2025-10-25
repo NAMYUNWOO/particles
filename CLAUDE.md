@@ -39,6 +39,44 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Always confirm file paths and module names** exist before referencing them in code or tests.
 - **Never delete or overwrite existing code** unless explicitly instructed to or if part of a task from `TASK.md`.
 
+## 📖 Accessing Raylib Documentation via Context7
+
+When you need up-to-date raylib documentation, code examples, or API references, use the Context7 MCP tools:
+
+### Step 1: Resolve the Library ID (First Time Only)
+```
+mcp__context7__resolve-library-id raylib
+```
+This returns the Context7-compatible library ID: `/raysan5/raylib`
+
+### Step 2: Fetch Documentation
+```
+mcp__context7__get-library-docs /raysan5/raylib
+```
+
+**Optional parameters:**
+- `tokens`: Maximum documentation size (default: 5000, increase for more comprehensive docs)
+- `topic`: Focus on specific areas (e.g., "particle systems", "collision detection", "shaders", "audio")
+
+**Examples:**
+```
+# Get general raylib documentation
+mcp__context7__get-library-docs /raysan5/raylib
+
+# Get comprehensive documentation (more tokens)
+mcp__context7__get-library-docs /raysan5/raylib tokens=10000
+
+# Get focused documentation on specific topic
+mcp__context7__get-library-docs /raysan5/raylib topic="collision detection"
+```
+
+**When to use:**
+- Implementing new raylib features
+- Verifying function signatures and parameters
+- Learning raylib patterns and best practices
+- Finding code examples for specific functionality
+- Troubleshooting raylib API usage
+
 ## Platform-Specific Notes
 - **macOS**: Raylib installed via Homebrew at `/opt/homebrew/Cellar/raylib/5.5`
 - **Windows**: Uses W64Devkit with Raylib at `C:/Users/namyunwoo/W64Devkit/w64devkit`

@@ -14,6 +14,7 @@ SRC_DIR      := src
 CORE_DIR     := $(SRC_DIR)/core
 ENTITIES_DIR := $(SRC_DIR)/entities
 MANAGERS_DIR := $(ENTITIES_DIR)/managers
+STAGES_DIR   := $(MANAGERS_DIR)/stages
 ITEMS_DIR    := $(ENTITIES_DIR)/items
 WEB_DIR      := build/web
 
@@ -33,7 +34,17 @@ SRC_FILES := \
 	$(MANAGERS_DIR)/enemy_manager.c \
 	$(MANAGERS_DIR)/particle_manager.c \
 	$(MANAGERS_DIR)/stage_manager.c \
-	$(MANAGERS_DIR)/item_manager.c
+	$(MANAGERS_DIR)/item_manager.c \
+	$(STAGES_DIR)/stage_1.c \
+	$(STAGES_DIR)/stage_2.c \
+	$(STAGES_DIR)/stage_3.c \
+	$(STAGES_DIR)/stage_4.c \
+	$(STAGES_DIR)/stage_5.c \
+	$(STAGES_DIR)/stage_6.c \
+	$(STAGES_DIR)/stage_7.c \
+	$(STAGES_DIR)/stage_8.c \
+	$(STAGES_DIR)/stage_9.c \
+	$(STAGES_DIR)/stage_10.c
 
 # Raylib for WebAssembly
 # Download from: https://github.com/raysan5/raylib/releases/download/5.0/raylib-5.0_webassembly.zip
