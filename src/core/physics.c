@@ -74,7 +74,8 @@ void ProcessEnemyCollisions(Game* game) {
         
         // Check if enemy has special collision properties
         bool isRepulsor = (game->enemies[e].type == ENEMY_TYPE_REPULSOR);
-        bool hasShield = game->enemies[e].hasShield && game->enemies[e].shieldHealth > 0;
+        bool hasShield = HasState(game->enemies[e].stateFlags, ENEMY_STATE_SHIELDED) &&
+                         game->enemies[e].stateData.shieldHealth > 0;
         
         // Batch processing for particles
         const int BATCH_SIZE = 1000;
@@ -106,7 +107,7 @@ void ProcessEnemyCollisions(Game* game) {
                         game->enemies[e].type == ENEMY_TYPE_BOSS_FINAL) {
                         damage *= 0.3f; // Bosses take less damage
                     }
-                    if (game->enemies[e].isInvulnerable) {
+                    if (HasState(game->enemies[e].stateFlags, ENEMY_STATE_INVULNERABLE)) {
                         damage = 0.0f; // No damage during invulnerability
                     }
                     
@@ -157,19 +158,19 @@ void ProcessEnemyCollisions(Game* game) {
             }
             
             // Check for boss phase changes
-            if (game->enemies[e].type == ENEMY_TYPE_BOSS_1 || 
+            if (game->enemies[e].type == ENEMY_TYPE_BOSS_1 ||
                 game->enemies[e].type == ENEMY_TYPE_BOSS_FINAL) {
-                int oldPhase = game->enemies[e].phase;
+                int oldPhase = game->enemies[e].stateData.phase;
                 float healthPercent = game->enemies[e].health / game->enemies[e].maxHealth;
-                
+
                 // Emit boss phase event if phase changed
-                if (oldPhase != game->enemies[e].phase) {
+                if (oldPhase != game->enemies[e].stateData.phase) {
                     BossPhaseEventData* phaseData = MemoryPool_Alloc(&g_bossPhaseEventPool);
                     if (phaseData) {
                         phaseData->enemyIndex = e;
                         phaseData->enemyPtr = &game->enemies[e];
                         phaseData->oldPhase = oldPhase;
-                        phaseData->newPhase = game->enemies[e].phase;
+                        phaseData->newPhase = game->enemies[e].stateData.phase;
                         phaseData->healthPercentage = healthPercent;
                         PublishEvent(EVENT_BOSS_PHASE_CHANGED, phaseData);
                     }

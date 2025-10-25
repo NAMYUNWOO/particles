@@ -379,11 +379,13 @@ void UpdateGame(Game* game) {
                 // }
                 
                 // Update blackhole state based on other enemies
-                if (otherEnemiesCount == 0 && game->enemies[i].isInvulnerable && !game->enemies[i].hasPulsed) {
+                if (otherEnemiesCount == 0 &&
+                    HasState(game->enemies[i].stateFlags, ENEMY_STATE_INVULNERABLE) &&
+                    !HasState(game->enemies[i].stateFlags, ENEMY_STATE_PULSED)) {
                     // printf("BLACKHOLE TRANSFORMATION TRIGGERED!\n");
                     // All other enemies are dead, perform pulse and transform immediately
-                    game->enemies[i].hasPulsed = true;
-                    game->enemies[i].isInvulnerable = false;
+                    SetState(&game->enemies[i].stateFlags, ENEMY_STATE_PULSED);
+                    ClearState(&game->enemies[i].stateFlags, ENEMY_STATE_INVULNERABLE);
                     game->enemies[i].movePattern = MOVE_PATTERN_TRACKING;
                     game->enemies[i].color = (Color){150, 0, 50, 255};  // Reddish color when active
                     game->enemies[i].aiState = AI_STATE_CHASE;
@@ -415,20 +417,20 @@ void UpdateGame(Game* game) {
                 }
                 
                 // Apply semi-magnetic storm after transformation (cycles every 5 seconds)
-                if (game->enemies[i].hasPulsed && game->enemies[i].type == ENEMY_TYPE_BLACKHOLE) {
+                if (HasState(game->enemies[i].stateFlags, ENEMY_STATE_PULSED) && game->enemies[i].type == ENEMY_TYPE_BLACKHOLE) {
                     // Update storm cycle timer
-                    game->enemies[i].stormCycleTimer += game->deltaTime;
-                    if (game->enemies[i].stormCycleTimer >= 6.0f) {
-                        game->enemies[i].stormCycleTimer = 0.0f;  // Reset every 6 seconds (5 on, 1 off)
+                    game->enemies[i].stateData.stormCycleTimer += game->deltaTime;
+                    if (game->enemies[i].stateData.stormCycleTimer >= 6.0f) {
+                        game->enemies[i].stateData.stormCycleTimer = 0.0f;  // Reset every 6 seconds (5 on, 1 off)
                     }
-                    
+
                     // Check if storm is active (first 5 seconds of cycle)
-                    bool stormActive = game->enemies[i].stormCycleTimer < 5.0f;
-                    
+                    bool stormActive = game->enemies[i].stateData.stormCycleTimer < 5.0f;
+
                     // Update color based on storm state
                     if (stormActive) {
                         // Calculate storm strength for color interpolation
-                        float stormStrength = 1.0f - (game->enemies[i].stormCycleTimer / 5.0f);
+                        float stormStrength = 1.0f - (game->enemies[i].stateData.stormCycleTimer / 5.0f);
                         // Interpolate from bright red to dark red as storm weakens
                         int redValue = 100 + (int)(100 * stormStrength);  // 200 to 100
                         int greenValue = (int)(50 * (1.0f - stormStrength));  // 0 to 50
@@ -474,7 +476,8 @@ void UpdateGame(Game* game) {
                 }
                 
                 // Only apply gravity if still has invulnerability and hasn't pulsed yet
-                if (game->enemies[i].isInvulnerable && !game->enemies[i].hasPulsed) {
+                if (HasState(game->enemies[i].stateFlags, ENEMY_STATE_INVULNERABLE) &&
+                    !HasState(game->enemies[i].stateFlags, ENEMY_STATE_PULSED)) {
                     // Apply strong attraction to nearby particles
                     #define BLACKHOLE_RADIUS 200.0f
                     #define BLACKHOLE_FORCE 5.0f
@@ -569,6 +572,9 @@ void DrawGame(Game* game) {
 
         // Draw test mode UI
         DrawTestModeUI(&game->testModeState, game->screenWidth, game->screenHeight);
+
+        // Draw enemy state debug info (for nearest enemy to cursor)
+        DrawEnemyStateDebug(game, game->screenWidth, game->screenHeight);
 
         // Draw FPS
         DrawFPS(10, 10);
@@ -1222,7 +1228,7 @@ void HandleEnemySplit(Game* game, Enemy* originalEnemy) {
         splitEnemy.radius = originalEnemy->radius * SPLIT_SIZE_REDUCTION;
         splitEnemy.health = originalEnemy->maxHealth * 0.5f;
         splitEnemy.maxHealth = splitEnemy.health;
-        splitEnemy.splitCount = originalEnemy->splitCount - 1;
+        splitEnemy.stateData.splitCount = originalEnemy->stateData.splitCount - 1;
         
         // Random velocity
         splitEnemy.velocity.x = GetRandomValue(-100, 100) / 50.0f;

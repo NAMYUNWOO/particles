@@ -64,4 +64,12 @@ bool RemoveNearestEnemy(void* game, Vector2 mousePos);
  */
 const char* GetEnemyTypeName(EnemyType type);
 
+/**
+ * @brief Draw enemy state debug information
+ * @param game Game instance
+ * @param screenWidth Screen width
+ * @param screenHeight Screen height
+ */
+void DrawEnemyStateDebug(void* game, int screenWidth, int screenHeight);
+
 #endif // DEV_TEST_MODE_H

@@ -30,6 +30,7 @@ SRC_FILES := \
 	$(ENTITIES_DIR)/player.c \
 	$(ENTITIES_DIR)/particle.c \
 	$(ENTITIES_DIR)/enemy.c \
+	$(ENTITIES_DIR)/enemy_state.c \
 	$(ENTITIES_DIR)/explosion.c \
 	$(ITEMS_DIR)/hp_potion.c \
 	$(MANAGERS_DIR)/enemy_manager.c \

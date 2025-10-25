@@ -21,9 +21,9 @@ Enemy InitEnemyByType(EnemyType type, int screenWidth, int screenHeight, Vector2
     enemy.spawnTime = GetTime();
     enemy.patternTimer = 0.0f;
     enemy.specialTimer = 0.0f;
-    enemy.phase = 0;
-    enemy.phaseTimer = 0.0f;
-    enemy.isInvulnerable = false;
+    enemy.stateData.phase = 0;
+    enemy.stateData.phaseTimer = 0.0f;
+    enemy.stateFlags = ENEMY_STATE_NONE;  // Initialize to no state flags
     
     // Type-specific initialization
     switch (type) {
@@ -76,7 +76,7 @@ Enemy InitEnemyByType(EnemyType type, int screenWidth, int screenHeight, Vector2
             enemy.movePattern = MOVE_PATTERN_STRAIGHT;
             enemy.aiState = AI_STATE_PATROL;
             enemy.color = GREEN;
-            enemy.splitCount = 2;  // Can split twice
+            enemy.stateData.splitCount = 2;  // Can split twice
             enemy.velocity = (Vector2){
                 GetRandomValue(-30, 30) / 50.0f,
                 GetRandomValue(-30, 30) / 50.0f
@@ -100,8 +100,10 @@ Enemy InitEnemyByType(EnemyType type, int screenWidth, int screenHeight, Vector2
             enemy.movePattern = MOVE_PATTERN_AGGRESSIVE;
             enemy.aiState = AI_STATE_ATTACK;
             enemy.color = DARKPURPLE;
-            enemy.hasShield = true;
-            enemy.shieldHealth = 200.0f;
+            enemy.stateFlags = ENEMY_STATE_SHIELDED;  // Start with shield
+            enemy.stateData.shieldHealth = 200.0f;
+            enemy.stateData.phase = 0;
+            enemy.stateData.phaseTimer = 0.0f;
             enemy.velocity = (Vector2){0, 0};
             break;
             
@@ -144,10 +146,11 @@ Enemy InitEnemyByType(EnemyType type, int screenWidth, int screenHeight, Vector2
             enemy.movePattern = MOVE_PATTERN_AGGRESSIVE;
             enemy.aiState = AI_STATE_ATTACK;
             enemy.color = GOLD;
-            enemy.hasShield = true;
-            enemy.shieldHealth = 500.0f;
+            enemy.stateFlags = ENEMY_STATE_SHIELDED;  // Start with shield
+            enemy.stateData.shieldHealth = 500.0f;
+            enemy.stateData.phase = 0;
+            enemy.stateData.phaseTimer = 0.0f;
             enemy.velocity = (Vector2){0, 0};
-            enemy.phase = 0;
             break;
             
         case ENEMY_TYPE_BLACKHOLE:
@@ -156,11 +159,11 @@ Enemy InitEnemyByType(EnemyType type, int screenWidth, int screenHeight, Vector2
             enemy.color = (Color){50, 0, 100, 255};  // Deep purple
             enemy.movePattern = MOVE_PATTERN_TRACKING;  // Always tracks the player
             enemy.damage = 30.0f;
-            enemy.isInvulnerable = true;  // Invulnerable until all other enemies are dead
+            enemy.stateFlags = ENEMY_STATE_INVULNERABLE;  // Start invulnerable until other enemies dead
             enemy.aiState = AI_STATE_CHASE;  // Always chasing player
-            enemy.hasPulsed = false;  // Hasn't pulsed yet
-            enemy.transformTimer = 0.0f;  // No transformation timer yet
-            enemy.stormCycleTimer = 0.0f;  // Storm cycle timer
+            // hasPulsed = false is default (flag not set)
+            enemy.stateData.transformTimer = 0.0f;  // No transformation timer yet
+            enemy.stateData.stormCycleTimer = 0.0f;  // Storm cycle timer
             // Blackhole moves faster than normal enemies
             // enemy.velocity.x *= 2.0f;
             // enemy.velocity.y *= 2.0f;
@@ -324,22 +327,22 @@ void UpdateEnemyAI(Enemy* enemy, Vector2 playerPos, float deltaTime) {
         case AI_STATE_ATTACK:
             // Boss attack patterns
             if (enemy->type == ENEMY_TYPE_BOSS_1 || enemy->type == ENEMY_TYPE_BOSS_FINAL) {
-                enemy->phaseTimer += deltaTime;
-                
+                enemy->stateData.phaseTimer += deltaTime;
+
                 // Phase transitions
-                if (enemy->health < enemy->maxHealth * 0.7f && enemy->phase == 0) {
-                    enemy->phase = 1;
-                    enemy->isInvulnerable = true;
-                    enemy->phaseTimer = 0.0f;
-                } else if (enemy->health < enemy->maxHealth * 0.3f && enemy->phase == 1) {
-                    enemy->phase = 2;
-                    enemy->isInvulnerable = true;
-                    enemy->phaseTimer = 0.0f;
+                if (enemy->health < enemy->maxHealth * 0.7f && enemy->stateData.phase == 0) {
+                    enemy->stateData.phase = 1;
+                    SetState(&enemy->stateFlags, ENEMY_STATE_INVULNERABLE);
+                    enemy->stateData.phaseTimer = 0.0f;
+                } else if (enemy->health < enemy->maxHealth * 0.3f && enemy->stateData.phase == 1) {
+                    enemy->stateData.phase = 2;
+                    SetState(&enemy->stateFlags, ENEMY_STATE_INVULNERABLE);
+                    enemy->stateData.phaseTimer = 0.0f;
                 }
-                
+
                 // End invulnerability after phase change
-                if (enemy->isInvulnerable && enemy->phaseTimer > 1.5f) {
-                    enemy->isInvulnerable = false;
+                if (HasState(enemy->stateFlags, ENEMY_STATE_INVULNERABLE) && enemy->stateData.phaseTimer > 1.5f) {
+                    ClearState(&enemy->stateFlags, ENEMY_STATE_INVULNERABLE);
                 }
             }
             break;
@@ -387,7 +390,7 @@ void UpdateEnemyMovement(Enemy* enemy, Vector2 playerPos, float deltaTime) {
                 if (dist > 0) {
                     float speed = TRACKER_SPEED_MULT;
                     if (enemy->type == ENEMY_TYPE_BOSS_1 || enemy->type == ENEMY_TYPE_BOSS_FINAL) {
-                        speed = 0.5f + enemy->phase * 0.3f;  // Bosses get faster in later phases
+                        speed = 0.5f + enemy->stateData.phase * 0.3f;  // Bosses get faster in later phases
                     }
                     enemy->velocity.x = (toPlayer.x / dist) * speed;
                     enemy->velocity.y = (toPlayer.y / dist) * speed;
@@ -463,7 +466,7 @@ void UpdateEnemyMovement(Enemy* enemy, Vector2 playerPos, float deltaTime) {
             };
             float playerDist = sqrtf(toPlayer.x * toPlayer.x + toPlayer.y * toPlayer.y);
             if (playerDist > 0) {
-                float speed = 2.0f + enemy->phase * 0.5f;
+                float speed = 2.0f + enemy->stateData.phase * 0.5f;
                 enemy->velocity.x = (toPlayer.x / playerDist) * speed;
                 enemy->velocity.y = (toPlayer.y / playerDist) * speed;
             }
@@ -500,14 +503,14 @@ void ExecuteEnemySpecialAbility(Enemy* enemy, Vector2 playerPos) {
         case ENEMY_TYPE_BOSS_1:
         case ENEMY_TYPE_BOSS_FINAL:
             // Boss special attacks based on phase
-            if (enemy->phase >= 1 && enemy->specialTimer > 3.0f) {
+            if (enemy->stateData.phase >= 1 && enemy->specialTimer > 3.0f) {
                 enemy->specialTimer = 0.0f;
                 // Burst movement
                 enemy->velocity.x = GetRandomValue(-300, 300) / 100.0f;
                 enemy->velocity.y = GetRandomValue(-300, 300) / 100.0f;
             }
-            
-            if (enemy->phase >= 2) {
+
+            if (enemy->stateData.phase >= 2) {
                 // Rage mode - faster and more aggressive
                 enemy->color = RED;
             }
@@ -545,7 +548,7 @@ void ExecuteEnemySpecialAbility(Enemy* enemy, Vector2 playerPos) {
 // Main update function
 void UpdateEnemy(Enemy* enemy, int screenWidth, int screenHeight, float deltaTime) {
     // Don't update if invulnerable (phase transition)
-    if (enemy->isInvulnerable) {
+    if (HasState(enemy->stateFlags, ENEMY_STATE_INVULNERABLE)) {
         enemy->color = ((int)(GetTime() * 10) % 2 == 0) ? WHITE : enemy->originalColor;
     }
     
@@ -616,7 +619,7 @@ void DrawEnemy(Enemy enemy) {
     }
     
     // Draw shield first if active
-    if (enemy.hasShield && enemy.shieldHealth > 0) {
+    if (HasState(enemy.stateFlags, ENEMY_STATE_SHIELDED) && enemy.stateData.shieldHealth > 0) {
         DrawEnemyShield(enemy);
     }
     
@@ -628,9 +631,9 @@ void DrawEnemy(Enemy enemy) {
     Color c = enemy.color;
     
     // Special color handling for certain types
-    if (enemy.type == ENEMY_TYPE_BOSS_FINAL && enemy.phase >= 2) {
+    if (enemy.type == ENEMY_TYPE_BOSS_FINAL && enemy.stateData.phase >= 2) {
         c = RED;  // Rage mode
-    } else if (enemy.isInvulnerable) {
+    } else if (HasState(enemy.stateFlags, ENEMY_STATE_INVULNERABLE)) {
         // Handled in update
     } else if (enemy.type != ENEMY_TYPE_TELEPORTER || enemy.color.r != 255) {
         // Health-based color for non-teleporting enemies
@@ -644,7 +647,8 @@ void DrawEnemy(Enemy enemy) {
     
     // Special rendering for blackhole enemy
     if (enemy.type == ENEMY_TYPE_BLACKHOLE) {
-        if (enemy.isInvulnerable && !enemy.hasPulsed) {
+        if (HasState(enemy.stateFlags, ENEMY_STATE_INVULNERABLE) &&
+            !HasState(enemy.stateFlags, ENEMY_STATE_PULSED)) {
             // Draw gravitational rings when invulnerable
             for (int i = 3; i >= 0; i--) {
                 float ringRadius = enemy.radius * (2.0f + i * 0.5f);
@@ -652,17 +656,17 @@ void DrawEnemy(Enemy enemy) {
                 DrawCircleLines(enemy.position.x, enemy.position.y, ringRadius, ringColor);
             }
             // Draw invulnerability shield effect
-            DrawCircleLines(enemy.position.x, enemy.position.y, enemy.radius + 5, 
+            DrawCircleLines(enemy.position.x, enemy.position.y, enemy.radius + 5,
                           (Color){100, 100, 255, 100});
             // Draw dark core
             DrawCircle(enemy.position.x, enemy.position.y, enemy.radius, BLACK);
             DrawCircle(enemy.position.x, enemy.position.y, enemy.radius * 0.8f, c);
-        } else if (enemy.hasPulsed) {
+        } else if (HasState(enemy.stateFlags, ENEMY_STATE_PULSED)) {
             // After transformation - semi-magnetic storm with fast movement
             DrawCircle(enemy.position.x, enemy.position.y, enemy.radius, c);
-            
+
             // Check if storm is active based on cycle timer
-            bool stormActive = fmodf(enemy.stormCycleTimer, 10.0f) < 5.0f;
+            bool stormActive = fmodf(enemy.stateData.stormCycleTimer, 10.0f) < 5.0f;
             
             // Draw storm field based on state
             if (stormActive) {
@@ -757,7 +761,7 @@ void DrawEnemy(Enemy enemy) {
 
 // Draw enemy shield
 void DrawEnemyShield(Enemy enemy) {
-    float shieldRatio = enemy.shieldHealth / (enemy.type == ENEMY_TYPE_BOSS_FINAL ? 500.0f : 200.0f);
+    float shieldRatio = enemy.stateData.shieldHealth / (enemy.type == ENEMY_TYPE_BOSS_FINAL ? 500.0f : 200.0f);
     Color shieldColor = Fade(SKYBLUE, 0.3f + shieldRatio * 0.3f);
     DrawCircleLines(enemy.position.x, enemy.position.y, enemy.radius + 10, shieldColor);
     DrawCircleLines(enemy.position.x, enemy.position.y, enemy.radius + 12, shieldColor);
@@ -765,15 +769,15 @@ void DrawEnemyShield(Enemy enemy) {
 
 // Damage enemy
 void DamageEnemy(Enemy* enemy, float damage) {
-    if (enemy->isInvulnerable) return;
-    
+    if (HasState(enemy->stateFlags, ENEMY_STATE_INVULNERABLE)) return;
+
     // Damage shield first
-    if (enemy->hasShield && enemy->shieldHealth > 0) {
-        enemy->shieldHealth -= damage;
-        if (enemy->shieldHealth < 0) {
-            enemy->health += enemy->shieldHealth;  // Apply remaining damage to health
-            enemy->shieldHealth = 0;
-            enemy->hasShield = false;
+    if (HasState(enemy->stateFlags, ENEMY_STATE_SHIELDED) && enemy->stateData.shieldHealth > 0) {
+        enemy->stateData.shieldHealth -= damage;
+        if (enemy->stateData.shieldHealth < 0) {
+            enemy->health += enemy->stateData.shieldHealth;  // Apply remaining damage to health
+            enemy->stateData.shieldHealth = 0;
+            ClearState(&enemy->stateFlags, ENEMY_STATE_SHIELDED);
         }
     } else {
         enemy->health -= damage;
@@ -782,9 +786,9 @@ void DamageEnemy(Enemy* enemy, float damage) {
 
 // Check if enemy should split
 bool ShouldEnemySplit(Enemy* enemy) {
-    return enemy->type == ENEMY_TYPE_SPLITTER && 
-           enemy->health <= 0 && 
-           enemy->splitCount > 0 &&
+    return enemy->type == ENEMY_TYPE_SPLITTER &&
+           enemy->health <= 0 &&
+           enemy->stateData.splitCount > 0 &&
            enemy->radius > ENEMY_MIN_SIZE;
 }
 

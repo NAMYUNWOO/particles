@@ -103,6 +103,50 @@ void HandleTestModeKeyboard(TestModeState* state, void* gamePtr) {
     if (IsKeyPressed(KEY_ZERO) && ENEMY_TYPE_COUNT > 9) {
         state->selectedEnemyType = (EnemyType)9;
     }
+
+    // State manipulation keys (work on nearest enemy to cursor)
+    if (IsKeyPressed(KEY_I) || IsKeyPressed(KEY_S) || IsKeyPressed(KEY_P)) {
+        if (game->enemyCount > 0) {
+            Vector2 mousePos = GetMousePosition();
+
+            // Find nearest enemy
+            int nearestIndex = -1;
+            float nearestDistance = 999999.0f;
+
+            for (int i = 0; i < game->enemyCount; i++) {
+                float distance = Vector2Distance(game->enemies[i].position, mousePos);
+                if (distance < nearestDistance) {
+                    nearestDistance = distance;
+                    nearestIndex = i;
+                }
+            }
+
+            if (nearestIndex >= 0 && nearestDistance <= 150.0f) {
+                Enemy* enemy = &game->enemies[nearestIndex];
+
+                if (IsKeyPressed(KEY_I)) {
+                    // Toggle Invulnerability
+                    ToggleState(&enemy->stateFlags, ENEMY_STATE_INVULNERABLE);
+                }
+
+                if (IsKeyPressed(KEY_S)) {
+                    // Toggle Shield
+                    if (HasState(enemy->stateFlags, ENEMY_STATE_SHIELDED)) {
+                        ClearState(&enemy->stateFlags, ENEMY_STATE_SHIELDED);
+                        enemy->stateData.shieldHealth = 0.0f;
+                    } else {
+                        SetState(&enemy->stateFlags, ENEMY_STATE_SHIELDED);
+                        enemy->stateData.shieldHealth = 100.0f;  // Default shield HP
+                    }
+                }
+
+                if (IsKeyPressed(KEY_P)) {
+                    // Toggle Pulsed (for BLACKHOLE testing)
+                    ToggleState(&enemy->stateFlags, ENEMY_STATE_PULSED);
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -170,6 +214,114 @@ bool RemoveNearestEnemy(void* gamePtr, Vector2 mousePos) {
 }
 
 /**
+ * Draw enemy state debug information for nearest enemy to cursor
+ */
+void DrawEnemyStateDebug(void* gamePtr, int screenWidth, int screenHeight) {
+    Game* game = (Game*)gamePtr;
+
+    if (game->enemyCount == 0) return;
+
+    Vector2 mousePos = GetMousePosition();
+
+    // Find nearest enemy
+    int nearestIndex = -1;
+    float nearestDistance = 999999.0f;
+
+    for (int i = 0; i < game->enemyCount; i++) {
+        float distance = Vector2Distance(game->enemies[i].position, mousePos);
+        if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestIndex = i;
+        }
+    }
+
+    if (nearestIndex < 0 || nearestDistance > 150.0f) return;  // Only show if within 150px
+
+    Enemy* enemy = &game->enemies[nearestIndex];
+
+    // Draw debug panel (bottom-left)
+    int panelX = 10;
+    int panelY = screenHeight - 220;
+    int panelWidth = 350;
+    int panelHeight = 210;
+
+    DrawRectangle(panelX, panelY, panelWidth, panelHeight, Fade(BLACK, 0.85f));
+    DrawRectangleLines(panelX, panelY, panelWidth, panelHeight, SKYBLUE);
+
+    int textY = panelY + 10;
+    int lineHeight = 18;
+
+    // Title
+    DrawText("ENEMY STATE DEBUG", panelX + 10, textY, 16, SKYBLUE);
+    textY += 25;
+
+    // Enemy type
+    char buffer[128];
+    sprintf(buffer, "Type: %s", GetEnemyTypeName(enemy->type));
+    DrawText(buffer, panelX + 10, textY, 14, WHITE);
+    textY += lineHeight;
+
+    // Health
+    sprintf(buffer, "Health: %.1f / %.1f", enemy->health, enemy->maxHealth);
+    DrawText(buffer, panelX + 10, textY, 14, WHITE);
+    textY += lineHeight;
+
+    // State flags (show individual flags)
+    DrawText("State Flags:", panelX + 10, textY, 14, YELLOW);
+    textY += lineHeight;
+
+    if (enemy->stateFlags == ENEMY_STATE_NONE) {
+        DrawText("  NONE", panelX + 10, textY, 12, LIGHTGRAY);
+        textY += lineHeight;
+    } else {
+        if (HasState(enemy->stateFlags, ENEMY_STATE_INVULNERABLE)) {
+            DrawText("  INVULNERABLE", panelX + 10, textY, 12, RED);
+            textY += lineHeight;
+        }
+        if (HasState(enemy->stateFlags, ENEMY_STATE_SHIELDED)) {
+            DrawText("  SHIELDED", panelX + 10, textY, 12, SKYBLUE);
+            textY += lineHeight;
+        }
+        if (HasState(enemy->stateFlags, ENEMY_STATE_PULSED)) {
+            DrawText("  PULSED", panelX + 10, textY, 12, PURPLE);
+            textY += lineHeight;
+        }
+        if (HasState(enemy->stateFlags, ENEMY_STATE_TELEPORTING)) {
+            DrawText("  TELEPORTING", panelX + 10, textY, 12, ORANGE);
+            textY += lineHeight;
+        }
+        if (HasState(enemy->stateFlags, ENEMY_STATE_STORM_ACTIVE)) {
+            DrawText("  STORM_ACTIVE", panelX + 10, textY, 12, DARKGREEN);
+            textY += lineHeight;
+        }
+    }
+
+    // State data (only show relevant fields)
+    DrawText("State Data:", panelX + 10, textY, 14, YELLOW);
+    textY += lineHeight;
+
+    sprintf(buffer, "  Phase: %d", enemy->stateData.phase);
+    DrawText(buffer, panelX + 10, textY, 12, LIGHTGRAY);
+    textY += lineHeight;
+
+    if (enemy->stateData.shieldHealth > 0) {
+        sprintf(buffer, "  Shield HP: %.1f", enemy->stateData.shieldHealth);
+        DrawText(buffer, panelX + 10, textY, 12, SKYBLUE);
+        textY += lineHeight;
+    }
+
+    if (enemy->stateData.splitCount > 0) {
+        sprintf(buffer, "  Splits Left: %d", enemy->stateData.splitCount);
+        DrawText(buffer, panelX + 10, textY, 12, ORANGE);
+        textY += lineHeight;
+    }
+
+    // Draw indicator line from cursor to enemy
+    DrawLineEx(mousePos, enemy->position, 2.0f, Fade(SKYBLUE, 0.5f));
+    DrawCircleV(enemy->position, enemy->radius + 5, Fade(SKYBLUE, 0.3f));
+}
+
+/**
  * Update test mode logic
  */
 void UpdateTestMode(TestModeState* state, void* gamePtr) {
@@ -202,10 +354,10 @@ void DrawTestModeUI(TestModeState* state, int screenWidth, int screenHeight) {
 
     // Draw help overlay if enabled
     if (state->showHelp) {
-        int helpX = screenWidth - 330;
+        int helpX = screenWidth - 360;
         int helpY = 10;
-        int helpWidth = 320;
-        int helpHeight = 280;
+        int helpWidth = 350;
+        int helpHeight = 350;
 
         DrawRectangle(helpX, helpY, helpWidth, helpHeight, Fade(BLACK, 0.8f));
         DrawRectangleLines(helpX, helpY, helpWidth, helpHeight, GREEN);
@@ -220,9 +372,14 @@ void DrawTestModeUI(TestModeState* state, int screenWidth, int screenHeight) {
         DrawText("C: Clear All Enemies", helpX + 10, helpY + 155, 14, WHITE);
         DrawText("ESC: Exit Test Mode", helpX + 10, helpY + 175, 14, WHITE);
         DrawText("", helpX + 10, helpY + 195, 14, WHITE);
-        DrawText("QUICK SELECT:", helpX + 10, helpY + 210, 14, YELLOW);
-        DrawText("1=BASIC  2=TRACKER  3=SPEEDY", helpX + 10, helpY + 230, 12, LIGHTGRAY);
-        DrawText("4=SPLIT  5=ORBIT   6=BOSS", helpX + 10, helpY + 245, 12, LIGHTGRAY);
-        DrawText("7=TELE   8=REPULSE 9=CLUSTER", helpX + 10, helpY + 260, 12, LIGHTGRAY);
+        DrawText("STATE TOGGLE (hover near enemy):", helpX + 10, helpY + 200, 14, SKYBLUE);
+        DrawText("I: Toggle Invulnerability", helpX + 10, helpY + 220, 14, RED);
+        DrawText("S: Toggle Shield", helpX + 10, helpY + 240, 14, SKYBLUE);
+        DrawText("P: Toggle Pulsed (BLACKHOLE)", helpX + 10, helpY + 260, 14, PURPLE);
+        DrawText("", helpX + 10, helpY + 280, 14, WHITE);
+        DrawText("QUICK SELECT:", helpX + 10, helpY + 290, 14, YELLOW);
+        DrawText("1=BASIC  2=TRACKER  3=SPEEDY", helpX + 10, helpY + 310, 12, LIGHTGRAY);
+        DrawText("4=SPLIT  5=ORBIT   6=BOSS", helpX + 10, helpY + 325, 12, LIGHTGRAY);
+        DrawText("7=TELE   8=REPULSE 9=CLUSTER", helpX + 10, helpY + 340, 12, LIGHTGRAY);
     }
 }

@@ -93,16 +93,16 @@ void UpdateAllEnemies(Game* game) {
             case ENEMY_TYPE_BOSS_1:
             case ENEMY_TYPE_BOSS_FINAL:
                 // Boss behavior based on phase
-                if (enemy->phase == 0) {
+                if (enemy->stateData.phase == 0) {
                     ChangeEnemyAIState(enemy, AI_STATE_ATTACK);
-                } else if (enemy->phase == 1) {
+                } else if (enemy->stateData.phase == 1) {
                     // Alternate between attack and special
                     if ((int)(GetTime() * 0.5f) % 2 == 0) {
                         ChangeEnemyAIState(enemy, AI_STATE_ATTACK);
                     } else {
                         ChangeEnemyAIState(enemy, AI_STATE_SPECIAL);
                     }
-                } else if (enemy->phase == 2) {
+                } else if (enemy->stateData.phase == 2) {
                     // Rage mode - always aggressive
                     ChangeEnemyAIState(enemy, AI_STATE_ATTACK);
                 }

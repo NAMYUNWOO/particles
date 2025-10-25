@@ -3,6 +3,7 @@
 
 #include "raylib.h"
 #include "player.h"
+#include "enemy_state.h"
 
 // Enemy types
 typedef enum {
@@ -68,24 +69,15 @@ typedef struct Enemy {
     float angle;              // Current angle for circular movements
     float orbitRadius;        // Radius for orbiting enemies
     Vector2 orbitCenter;      // Center point for orbiting
-    int splitCount;           // Number of times this enemy can split
-    bool hasShield;           // Shield status
-    float shieldHealth;       // Shield health
-    
+
+    // Unified state system
+    uint32_t stateFlags;      // Bitflags for boolean states (ENEMY_STATE_*)
+    EnemyStateData stateData; // Numeric state values (phase, splitCount, shieldHealth, etc.)
+
     // Smooth movement data for ENEMY_TYPE_BASIC
     Vector2 wanderTarget;     // Current wander target position
     float wanderAngle;        // Current wander angle for smooth turning
     float turnSpeed;          // How fast the enemy can turn
-    
-    // Boss-specific data
-    int phase;                // Boss phase
-    float phaseTimer;         // Timer for phase changes
-    bool isInvulnerable;      // Invulnerability during phase change
-    
-    // Blackhole-specific data
-    bool hasPulsed;           // Whether the blackhole has done its one-time pulse
-    float transformTimer;     // Timer for transformation after pulse
-    float stormCycleTimer;    // Timer for magnetic storm on/off cycle
 } Enemy;
 
 // Constants
