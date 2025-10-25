@@ -5,7 +5,9 @@
 CC := emcc
 
 # Compiler flags for web
-CFLAGS := -Wall -std=c99 -D_DEFAULT_SOURCE -DPLATFORM_WEB
+# -O3: Maximum optimization for performance
+# -flto: Link-time optimization for better performance
+CFLAGS := -Wall -std=c99 -D_DEFAULT_SOURCE -DPLATFORM_WEB -O3 -flto
 
 # Directories
 SRC_DIR      := src
@@ -46,10 +48,14 @@ LDFLAGS := \
 	-s ASYNCIFY \
 	-s WASM=1 \
 	-s GL_ENABLE_GET_PROC_ADDRESS=1 \
-	-s ASSERTIONS=1 \
 	-s ALLOW_MEMORY_GROWTH=1 \
-	-s TOTAL_MEMORY=67108864 \
-	--shell-file $(RAYLIB_WEB_PATH)/shell.html
+	-s TOTAL_MEMORY=134217728 \
+	-s INITIAL_MEMORY=134217728 \
+	-s STACK_SIZE=5242880 \
+	--shell-file $(RAYLIB_WEB_PATH)/shell.html \
+	-O3 \
+	--closure 1 \
+	-s ENVIRONMENT=web
 
 # Output files
 OUTPUT_NAME := particle_storm
