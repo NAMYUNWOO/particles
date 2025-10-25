@@ -193,8 +193,9 @@ http://localhost:8000/particle_storm.html?test-mode=1
 
 **Test Mode Controls:**
 - **Left Click**: Spawn selected enemy at mouse cursor
-- **1-9**: Select enemy type (1=BASIC, 2=TRACKER, 3=SPEEDY, etc.)
-- **0**: Select BLACKHOLE enemy
+- **TAB**: Cycle to next enemy type (supports unlimited enemies)
+- **Shift+TAB**: Cycle to previous enemy type
+- **1-9, 0**: Quick select first 10 enemy types (1=BASIC through 0=CLUSTER)
 - **R**: Remove nearest enemy to cursor
 - **C**: Clear all enemies
 - **F1**: Toggle help overlay
@@ -207,11 +208,26 @@ http://localhost:8000/particle_storm.html?test-mode=1
 - No time limits
 - Up to 50 enemies can be spawned
 - Real-time statistics display (enemies spawned/removed)
-- All 11 enemy types available for testing
+- **Supports unlimited enemy types** - TAB cycling works with any number of enemies
+- Currently 11 enemy types available (BASIC through BLACKHOLE)
 
 **Key Files:**
 - `src/core/dev_test_mode.c/h` - Test mode logic
 - `src/entities/managers/stages/stage_test.c` - Test mode stage configuration
+
+**Adding New Enemy Types to Test Mode:**
+When you add a new enemy type, update these 2 locations:
+
+1. **`src/entities/enemy.h`** - Add to EnemyType enum (before ENEMY_TYPE_COUNT)
+2. **`src/core/dev_test_mode.c:8`** - Add name to ENEMY_TYPE_NAMES array
+
+The test mode will automatically:
+- Include new enemy in TAB cycling
+- Support spawning via mouse click
+- Display enemy name in UI
+- Allow removal and clearing
+
+No other changes needed! TAB/Shift+TAB provides access to all enemy types, regardless of count.
 
 ### Testing Specific Enemies (Legacy Method)
 To test specific enemy types by modifying stage definitions:

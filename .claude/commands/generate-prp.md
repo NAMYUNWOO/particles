@@ -9,16 +9,16 @@ The AI agent only gets the context you are appending to the PRP and training dat
 ## Research Process
 
 1. **Codebase Analysis**
-   - Use context7 mcp `upstash-context-7-mcp - get-library-docs raysan5/raylib {your question}` 
+   - Use context7 mcp 
    - Search for similar features/patterns in the codebase
    - Search for features/patterns in `examples/`
    - Identify files to reference in PRP
    - Note existing conventions to follow
    - Check test patterns for validation approach
-   
+
 
 3. **External Research**
-   - Raylib context7 latest doc: `upstash-context-7-mcp get-library-docs /raysan5/raylib`
+   - Raylib context7 latest doc:
    - Raylib documentation: https://github.com/raysan5/raylib/wiki/
    - Raylib Cheatsheet: https://www.raylib.com/cheatsheet/cheatsheet.html
    - Search for similar features/patterns online
@@ -29,6 +29,40 @@ The AI agent only gets the context you are appending to the PRP and training dat
 4. **User Clarification** (if needed)
    - Specific patterns to mirror and where to find them?
    - Integration requirements and where to find them?
+
+
+
+## 📖 Accessing Raylib Documentation via Context7
+
+When you need up-to-date raylib documentation, code examples, or API references, use the Context7 MCP tools:
+
+### Step 1: Resolve the Library ID (First Time Only)
+```
+mcp__context7__resolve-library-id raylib
+```
+This returns the Context7-compatible library ID: `/raysan5/raylib`
+
+### Step 2: Fetch Documentation
+```
+mcp__context7__get-library-docs /raysan5/raylib
+```
+
+**Optional parameters:**
+- `tokens`: Maximum documentation size (default: 5000, increase for more comprehensive docs)
+- `topic`: Focus on specific areas (e.g., "particle systems", "collision detection", "shaders", "audio")
+
+**Examples:**
+```
+# Get general raylib documentation
+mcp__context7__get-library-docs /raysan5/raylib
+
+# Get comprehensive documentation (more tokens)
+mcp__context7__get-library-docs /raysan5/raylib tokens=10000
+
+# Get focused documentation on specific topic
+mcp__context7__get-library-docs /raysan5/raylib topic="collision detection"
+```
+
 
 ## PRP Generation
 

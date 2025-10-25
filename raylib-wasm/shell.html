@@ -213,8 +213,9 @@
         <div class="controls" id="testModeControls" style="display: none;">
             <h3>🛠️ Test Mode Controls</h3>
             <p><strong>Left Click</strong> - Spawn selected enemy at cursor</p>
-            <p><strong>1-9</strong> - Select enemy type (Blackhole, Tracker, Zigzag, etc.)</p>
-            <p><strong>0</strong> - Select Blackhole enemy</p>
+            <p><strong>TAB</strong> - Cycle to next enemy type (supports unlimited enemies)</p>
+            <p><strong>Shift+TAB</strong> - Cycle to previous enemy type</p>
+            <p><strong>1-9, 0</strong> - Quick select first 10 enemy types</p>
             <p><strong>R</strong> - Remove nearest enemy to cursor</p>
             <p><strong>C</strong> - Clear all enemies</p>
             <p><strong>F1</strong> - Toggle help overlay</p>
@@ -230,7 +231,7 @@
 
         // Stage descriptions
         var stageDescriptions = {
-            'test': 'Developer test environment - Spawn and test individual enemy types. Click to spawn, keyboard shortcuts 1-9 for enemy selection, R to remove, C to clear all.',
+            'test': 'Developer test environment - Spawn and test individual enemy types. Use TAB to cycle through all enemies, 1-9,0 for quick select, click to spawn, R to remove, C to clear all.',
             '1': 'Introduces Blackhole enemy. Learn to use gravity against enemies!',
             '2': 'Tracker enemies follow your position. Master dodging!',
             '3': 'Fast enemies with zigzag movement. Test your reflexes!',

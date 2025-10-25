@@ -81,16 +81,27 @@ void HandleTestModeKeyboard(TestModeState* state, void* gamePtr) {
         }
     }
 
-    // Enemy type selection (1-9, 0)
+    // Cycle through enemy types with TAB/Shift+TAB
+    if (IsKeyPressed(KEY_TAB)) {
+        if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) {
+            // Shift+TAB: Previous enemy type (with wrapping)
+            state->selectedEnemyType = (EnemyType)((state->selectedEnemyType - 1 + ENEMY_TYPE_COUNT) % ENEMY_TYPE_COUNT);
+        } else {
+            // TAB: Next enemy type (with wrapping)
+            state->selectedEnemyType = (EnemyType)((state->selectedEnemyType + 1) % ENEMY_TYPE_COUNT);
+        }
+    }
+
+    // Enemy type selection (1-9, 0) - Quick access to first 10
     for (int i = 0; i < ENEMY_TYPE_COUNT && i < 10; i++) {
         if (IsKeyPressed(ENEMY_SELECTION_KEYS[i])) {
             state->selectedEnemyType = (EnemyType)i;
         }
     }
 
-    // Special case: 0 key selects BLACKHOLE (last enemy)
-    if (IsKeyPressed(KEY_ZERO)) {
-        state->selectedEnemyType = ENEMY_TYPE_BLACKHOLE;
+    // Special case: 0 key selects enemy at index 9 (10th enemy) if it exists
+    if (IsKeyPressed(KEY_ZERO) && ENEMY_TYPE_COUNT > 9) {
+        state->selectedEnemyType = (EnemyType)9;
     }
 }
 
@@ -191,26 +202,27 @@ void DrawTestModeUI(TestModeState* state, int screenWidth, int screenHeight) {
 
     // Draw help overlay if enabled
     if (state->showHelp) {
-        int helpX = screenWidth - 320;
+        int helpX = screenWidth - 330;
         int helpY = 10;
-        int helpWidth = 310;
-        int helpHeight = 260;
+        int helpWidth = 320;
+        int helpHeight = 280;
 
         DrawRectangle(helpX, helpY, helpWidth, helpHeight, Fade(BLACK, 0.8f));
         DrawRectangleLines(helpX, helpY, helpWidth, helpHeight, GREEN);
 
         DrawText("TEST MODE CONTROLS", helpX + 10, helpY + 10, 16, GREEN);
         DrawText("F1: Toggle Help", helpX + 10, helpY + 35, 14, WHITE);
-        DrawText("1-9: Select Enemy Type", helpX + 10, helpY + 55, 14, WHITE);
-        DrawText("0: Select BLACKHOLE", helpX + 10, helpY + 75, 14, WHITE);
-        DrawText("Left Click: Spawn Enemy", helpX + 10, helpY + 95, 14, WHITE);
-        DrawText("R: Remove Nearest Enemy", helpX + 10, helpY + 115, 14, WHITE);
-        DrawText("C: Clear All Enemies", helpX + 10, helpY + 135, 14, WHITE);
-        DrawText("ESC: Exit Test Mode", helpX + 10, helpY + 155, 14, WHITE);
-        DrawText("", helpX + 10, helpY + 175, 14, WHITE);
-        DrawText("ENEMY TYPES:", helpX + 10, helpY + 195, 14, YELLOW);
-        DrawText("1=BASIC  2=TRACKER  3=SPEEDY", helpX + 10, helpY + 215, 12, LIGHTGRAY);
-        DrawText("4=SPLIT  5=ORBIT   6=BOSS", helpX + 10, helpY + 230, 12, LIGHTGRAY);
-        DrawText("7=TELE   8=REPULSE 9=CLUSTER", helpX + 10, helpY + 245, 12, LIGHTGRAY);
+        DrawText("TAB: Next Enemy Type", helpX + 10, helpY + 55, 14, YELLOW);
+        DrawText("Shift+TAB: Previous Enemy", helpX + 10, helpY + 75, 14, YELLOW);
+        DrawText("1-9,0: Quick Select (1st-10th)", helpX + 10, helpY + 95, 14, WHITE);
+        DrawText("Left Click: Spawn Enemy", helpX + 10, helpY + 115, 14, WHITE);
+        DrawText("R: Remove Nearest Enemy", helpX + 10, helpY + 135, 14, WHITE);
+        DrawText("C: Clear All Enemies", helpX + 10, helpY + 155, 14, WHITE);
+        DrawText("ESC: Exit Test Mode", helpX + 10, helpY + 175, 14, WHITE);
+        DrawText("", helpX + 10, helpY + 195, 14, WHITE);
+        DrawText("QUICK SELECT:", helpX + 10, helpY + 210, 14, YELLOW);
+        DrawText("1=BASIC  2=TRACKER  3=SPEEDY", helpX + 10, helpY + 230, 12, LIGHTGRAY);
+        DrawText("4=SPLIT  5=ORBIT   6=BOSS", helpX + 10, helpY + 245, 12, LIGHTGRAY);
+        DrawText("7=TELE   8=REPULSE 9=CLUSTER", helpX + 10, helpY + 260, 12, LIGHTGRAY);
     }
 }
