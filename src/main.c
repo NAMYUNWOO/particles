@@ -3,6 +3,7 @@
 #include "core/event/event_system.h"
 #include "core/input_handler.h"
 #include "entities/managers/stage_manager.h"
+#include "entities/managers/stages/stage_common.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -28,6 +29,22 @@ int ParseStartingStage(int argc, char *argv[]) {
     return 0;  // Normal game start
 }
 
+/**
+ * Parse command line arguments for test mode
+ *
+ * @param argc Argument count
+ * @param argv Argument values
+ * @return true if test mode requested
+ */
+bool ParseTestMode(int argc, char *argv[]) {
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--test-mode") == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 int main(int argc, char *argv[])
 {
     const int screenWidth = 800;
@@ -38,6 +55,7 @@ int main(int argc, char *argv[])
 
     // Parse command-line arguments for stage selection
     int startingStage = ParseStartingStage(argc, argv);
+    bool testMode = ParseTestMode(argc, argv);
 
     // 이벤트 시스템 초기화
     InitEventSystem();
@@ -67,6 +85,15 @@ int main(int argc, char *argv[])
         game.currentStage.state = STAGE_STATE_INTRO;
         game.currentStage.stateTimer = 0.0f;
         ResetSpawnTiming();
+    }
+
+    // Jump to test mode if requested
+    if (testMode) {
+        game.currentStageNumber = 0;
+        game.gameState = GAME_STATE_TEST_MODE;
+        game.currentStage = CreateStageTest();
+        game.currentStage.state = STAGE_STATE_ACTIVE;
+        game.testModeState = InitTestMode();
     }
 
     // 이벤트 시스템 사용 시 입력 핸들러와 충돌 핸들러 등록

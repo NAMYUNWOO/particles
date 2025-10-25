@@ -50,4 +50,7 @@ Stage CreateStage9(void);
 // Stage 10: Final boss
 Stage CreateStage10(void);
 
+// Stage Test: Developer test mode
+Stage CreateStageTest(void);
+
 #endif // STAGE_COMMON_H

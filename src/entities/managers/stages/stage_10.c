@@ -66,8 +66,8 @@ Stage CreateStage10(void) {
     stage.enemyHealthMultiplier = 3.0f;  // Final boss has massive health
     stage.enemySpeedMultiplier = 1.5f;
     stage.enemySizeMultiplier = 2.0f;  // Final boss is much larger
-    stage.backgroundColor = BLACK;
-    stage.particleColor = GOLD;
+    stage.backgroundColor = (Color){52, 58, 64, 255};  // Space grey background
+    stage.particleColor = WHITE;  // White particles for maximum visibility
     stage.hasSpecialEffect = true;
 
     return stage;

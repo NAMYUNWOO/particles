@@ -24,6 +24,7 @@ SRC_FILES := \
 	$(CORE_DIR)/physics.c \
 	$(CORE_DIR)/input_handler.c \
 	$(CORE_DIR)/memory_pool.c \
+	$(CORE_DIR)/dev_test_mode.c \
 	$(CORE_DIR)/event/event_system.c \
 	$(ENTITIES_DIR)/player.c \
 	$(ENTITIES_DIR)/particle.c \
@@ -43,7 +44,8 @@ SRC_FILES := \
 	$(STAGES_DIR)/stage_7.c \
 	$(STAGES_DIR)/stage_8.c \
 	$(STAGES_DIR)/stage_9.c \
-	$(STAGES_DIR)/stage_10.c
+	$(STAGES_DIR)/stage_10.c \
+	$(STAGES_DIR)/stage_test.c
 OBJ_FILES := $(SRC_FILES:.c=.o)
 
 # Platform detection: Windows_NT for Windows, otherwise assume macOS
@@ -133,6 +135,11 @@ test-stage-9: all
 test-stage-10: all
 	@echo "Testing Stage 10: The Particle Overlord (FINAL BOSS)"
 	@./$(BIN_DIR)/game --start-stage 10
+
+# Developer test mode - interactive enemy spawning and testing
+test-enemy: all
+	@echo "Launching developer test mode..."
+	@./$(BIN_DIR)/game --test-mode
 
 # Compile individual stage files for validation
 compile-stage-%: $(STAGES_DIR)/stage_%.c

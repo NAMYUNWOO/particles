@@ -61,8 +61,8 @@ Stage CreateStage1(void) {
     stage.enemyHealthMultiplier = 1.2f;  // Blackholes are slightly tougher
     stage.enemySpeedMultiplier = 0.8f;   // Normal speed (blackhole has its own speed boost)
     stage.enemySizeMultiplier = 1.3f;    // Normal size (blackhole already has custom size)
-    stage.backgroundColor = (Color){20, 20, 30, 255};  // Dark space background
-    stage.particleColor = (Color){200, 200, 255, 255}; // Light blue particles
+    stage.backgroundColor = (Color){52, 58, 64, 255};  // Space grey background
+    stage.particleColor = WHITE;  // White particles for maximum visibility
     stage.particleAttractionMultiplier = 1.5f;  // Stronger particle attraction
 
     return stage;

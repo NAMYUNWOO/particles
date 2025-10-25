@@ -18,6 +18,9 @@ make test-stage-1      # Test Stage 1: Gravitational Anomaly
 make test-stage-6      # Test Stage 6: Boss Battle
 make test-stage-10     # Test Stage 10: Final Boss
 
+# Launch developer test mode (interactive enemy testing)
+make test-enemy        # Spawns enemies interactively with mouse/keyboard
+
 # Compile a single stage file for validation
 make compile-stage-3   # Check Stage 3 for compilation errors
 
@@ -96,7 +99,15 @@ Handles particle attraction and collision:
 ## Game States
 
 ```
+Normal Flow:
 GAME_STATE_TUTORIAL → GAME_STATE_STAGE_INTRO → GAME_STATE_PLAYING → GAME_STATE_OVER → GAME_STATE_SCORE_ENTRY → (back to TUTORIAL)
+
+Developer Mode:
+GAME_STATE_TEST_MODE (launched with --test-mode flag)
+  - Interactive enemy spawning/removal
+  - No win/loss conditions
+  - Direct enemy type selection
+  - ESC to exit back to tutorial
 ```
 
 ## Stage Design
@@ -167,8 +178,43 @@ The game prints debug info every 2 seconds during gameplay:
 - `F4`: Toggle debug overlay
 - `F5`: Reload current stage
 
-### Testing Specific Enemies
-To test specific enemy types, modify stage definitions in `stage_manager.c`:
+### Developer Test Mode
+Interactive environment for testing individual enemy types without modifying code:
+
+**Launch Test Mode:**
+```bash
+# Desktop
+make test-enemy
+./bin/game --test-mode
+
+# Web (select "Developer Test Mode" from dropdown)
+http://localhost:8000/particle_storm.html?test-mode=1
+```
+
+**Test Mode Controls:**
+- **Left Click**: Spawn selected enemy at mouse cursor
+- **1-9**: Select enemy type (1=BASIC, 2=TRACKER, 3=SPEEDY, etc.)
+- **0**: Select BLACKHOLE enemy
+- **R**: Remove nearest enemy to cursor
+- **C**: Clear all enemies
+- **F1**: Toggle help overlay
+- **ESC**: Exit test mode, return to main menu
+
+**Test Mode Features:**
+- Clean environment (space grey background, white particles)
+- No automatic enemy spawning
+- No win/loss conditions
+- No time limits
+- Up to 50 enemies can be spawned
+- Real-time statistics display (enemies spawned/removed)
+- All 11 enemy types available for testing
+
+**Key Files:**
+- `src/core/dev_test_mode.c/h` - Test mode logic
+- `src/entities/managers/stages/stage_test.c` - Test mode stage configuration
+
+### Testing Specific Enemies (Legacy Method)
+To test specific enemy types by modifying stage definitions:
 ```c
 // Example: Test blackhole enemy in Stage 1
 void CreateStage1() {
@@ -197,6 +243,7 @@ src/
 │   ├── physics.c/h          # Physics simulation
 │   ├── input_handler.c/h    # Input processing
 │   ├── memory_pool.c/h      # Memory pool system
+│   ├── dev_test_mode.c/h    # Developer test mode (NEW)
 │   └── event/
 │       ├── event_system.c/h # Event system core
 │       └── event_types.h    # Event structures
@@ -224,7 +271,8 @@ src/
             ├── stage_7.c        # Stage 7: Quantum Flux
             ├── stage_8.c        # Stage 8: Magnetic Storm
             ├── stage_9.c        # Stage 9: Chain Reaction
-            └── stage_10.c       # Stage 10: Final Boss
+            ├── stage_10.c       # Stage 10: Final Boss
+            └── stage_test.c     # Developer test mode stage (NEW)
 ```
 
 ## Performance Monitoring

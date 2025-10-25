@@ -10,6 +10,7 @@
 #include "../entities/managers/stage_manager.h"
 #include "../entities/managers/item_manager.h"
 #include "event/event_system.h"
+#include "dev_test_mode.h"
 
 // Global screen dimensions
 extern int g_screenWidth;
@@ -30,7 +31,8 @@ typedef enum {
     GAME_STATE_SCORE_ENTRY,
     GAME_STATE_STAGE_INTRO,    // New: Stage introduction
     GAME_STATE_STAGE_COMPLETE, // New: Stage completed
-    GAME_STATE_VICTORY        // New: All stages completed
+    GAME_STATE_VICTORY,        // New: All stages completed
+    GAME_STATE_TEST_MODE       // New: Developer test mode
 } GameState;
 
 typedef struct {
@@ -76,10 +78,13 @@ typedef struct Game {
     
     // 이벤트 시스템 관련 플래그
     bool useEventSystem;  // 이벤트 시스템 사용 여부
-    
+
     // Statistics
     int totalEnemiesKilled;
     int enemiesKilledThisStage;
+
+    // Test mode
+    TestModeState testModeState;  // Test mode state
 } Game;
 
 // Game initialization and cleanup

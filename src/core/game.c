@@ -158,7 +158,32 @@ void UpdateGame(Game* game) {
     // if (game->useEventSystem) {
     //     ProcessInputEvents();
     // }
-    
+
+    // Test mode update
+    if (game->gameState == GAME_STATE_TEST_MODE) {
+        // Update test mode logic
+        UpdateTestMode(&game->testModeState, game);
+
+        // Update player
+        UpdatePlayer(&game->player, game->screenWidth, game->screenHeight, game->moveSpeed, game->deltaTime);
+
+        // Update particles
+        UpdateAllParticles(game, IsKeyDown(KEY_SPACE));
+
+        // Update enemies
+        UpdateAllEnemies(game);
+
+        // Handle collisions
+        ProcessEnemyCollisions(game);
+
+        // Exit test mode with ESC
+        if (IsKeyPressed(KEY_ESCAPE)) {
+            game->gameState = GAME_STATE_TUTORIAL;
+        }
+
+        return;
+    }
+
     if (game->gameState == GAME_STATE_TUTORIAL) {
         if (IsKeyPressed(KEY_ENTER)) {
             // 여기에 새로운 코드 추가: TUTORIAL → PLAYING 전환 시 게임 리소스 리셋
@@ -517,11 +542,39 @@ void UpdateGame(Game* game) {
 
 void DrawGame(Game* game) {
     BeginDrawing();
-    
-    if (game->gameState == GAME_STATE_PLAYING || game->gameState == GAME_STATE_STAGE_INTRO) {
+
+    if (game->gameState == GAME_STATE_PLAYING || game->gameState == GAME_STATE_STAGE_INTRO || game->gameState == GAME_STATE_TEST_MODE) {
         ClearBackground(game->currentStage.backgroundColor);
     } else {
         ClearBackground(RAYWHITE);
+    }
+
+    // Test mode rendering
+    if (game->gameState == GAME_STATE_TEST_MODE) {
+        // Draw particles
+        for (int i = 0; i < PARTICLE_COUNT; i++) {
+            DrawParticlePixel(game->particles[i]);
+        }
+
+        // Draw enemies
+        for (int i = 0; i < game->enemyCount; i++) {
+            DrawEnemy(game->enemies[i]);
+        }
+
+        // Draw player
+        if (!game->player.isInvincible || ((int)(GetTime() * 10) % 2 == 0)) {
+            DrawRectangle(game->player.position.x, game->player.position.y,
+                         game->player.size, game->player.size, RED);
+        }
+
+        // Draw test mode UI
+        DrawTestModeUI(&game->testModeState, game->screenWidth, game->screenHeight);
+
+        // Draw FPS
+        DrawFPS(10, 10);
+
+        EndDrawing();
+        return;
     }
 
     if (game->gameState == GAME_STATE_TUTORIAL) {

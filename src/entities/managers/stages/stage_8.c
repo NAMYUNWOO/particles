@@ -66,8 +66,8 @@ Stage CreateStage8(void) {
     stage.enemyHealthMultiplier = 1.6f;
     stage.enemySpeedMultiplier = 1.1f;
     stage.enemySizeMultiplier = 1.0f;
-    stage.backgroundColor = (Color){255, 240, 200, 255};
-    stage.particleColor = ORANGE;
+    stage.backgroundColor = (Color){52, 58, 64, 255};  // Space grey background
+    stage.particleColor = WHITE;  // White particles for maximum visibility
     stage.particleAttractionMultiplier = 0.7f;  // Particles are harder to control
 
     return stage;

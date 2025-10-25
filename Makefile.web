@@ -25,6 +25,7 @@ SRC_FILES := \
 	$(CORE_DIR)/physics.c \
 	$(CORE_DIR)/input_handler.c \
 	$(CORE_DIR)/memory_pool.c \
+	$(CORE_DIR)/dev_test_mode.c \
 	$(CORE_DIR)/event/event_system.c \
 	$(ENTITIES_DIR)/player.c \
 	$(ENTITIES_DIR)/particle.c \
@@ -44,7 +45,8 @@ SRC_FILES := \
 	$(STAGES_DIR)/stage_7.c \
 	$(STAGES_DIR)/stage_8.c \
 	$(STAGES_DIR)/stage_9.c \
-	$(STAGES_DIR)/stage_10.c
+	$(STAGES_DIR)/stage_10.c \
+	$(STAGES_DIR)/stage_test.c
 
 # Raylib for WebAssembly
 # Download from: https://github.com/raysan5/raylib/releases/download/5.0/raylib-5.0_webassembly.zip

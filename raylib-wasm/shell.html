@@ -174,6 +174,7 @@
             <label for="stageSelect">Select Stage:</label>
             <select id="stageSelect" onchange="reloadWithStage()">
                 <option value="0">Full Game (All 10 Stages)</option>
+                <option value="test">🛠️ Developer Test Mode</option>
                 <option value="1">Stage 1: Gravitational Anomaly</option>
                 <option value="2">Stage 2: The Hunt Begins</option>
                 <option value="3">Stage 3: Speed Demons</option>
@@ -205,8 +206,19 @@
             <p><strong>Space</strong> - Hold to boost particle attraction (2x strength)</p>
             <p><strong>Left Shift</strong> - Hold to boost movement speed (2x speed)</p>
             <p><strong>Enter</strong> - Progress through menus/stages</p>
-            <p><strong>ESC</strong> - Pause game</p>
+            <p><strong>ESC</strong> - Pause game / Exit test mode</p>
             <p><strong>F1-F5</strong> - Debug keys (if enabled)</p>
+        </div>
+
+        <div class="controls" id="testModeControls" style="display: none;">
+            <h3>🛠️ Test Mode Controls</h3>
+            <p><strong>Left Click</strong> - Spawn selected enemy at cursor</p>
+            <p><strong>1-9</strong> - Select enemy type (Blackhole, Tracker, Zigzag, etc.)</p>
+            <p><strong>0</strong> - Select Blackhole enemy</p>
+            <p><strong>R</strong> - Remove nearest enemy to cursor</p>
+            <p><strong>C</strong> - Clear all enemies</p>
+            <p><strong>F1</strong> - Toggle help overlay</p>
+            <p><strong>ESC</strong> - Return to main menu</p>
         </div>
     </div>
 
@@ -218,6 +230,7 @@
 
         // Stage descriptions
         var stageDescriptions = {
+            'test': 'Developer test environment - Spawn and test individual enemy types. Click to spawn, keyboard shortcuts 1-9 for enemy selection, R to remove, C to clear all.',
             '1': 'Introduces Blackhole enemy. Learn to use gravity against enemies!',
             '2': 'Tracker enemies follow your position. Master dodging!',
             '3': 'Fast enemies with zigzag movement. Test your reflexes!',
@@ -233,6 +246,10 @@
         // Get stage from URL parameter
         function getStageFromURL() {
             var urlParams = new URLSearchParams(window.location.search);
+            // Check if test mode is active
+            if (urlParams.get('test-mode') === '1') {
+                return 'test';
+            }
             return urlParams.get('stage') || '0';
         }
 
@@ -241,6 +258,8 @@
             var stage = document.getElementById('stageSelect').value;
             if (stage === '0') {
                 window.location.href = window.location.pathname;
+            } else if (stage === 'test') {
+                window.location.href = window.location.pathname + '?test-mode=1';
             } else {
                 window.location.href = window.location.pathname + '?stage=' + stage;
             }
@@ -250,10 +269,16 @@
         var currentStage = getStageFromURL();
         document.getElementById('stageSelect').value = currentStage;
 
-        // Show stage info if specific stage is selected
+        // Show stage info if specific stage or test mode is selected
         if (currentStage !== '0') {
             stageInfoElement.style.display = 'block';
             stageDescriptionElement.textContent = stageDescriptions[currentStage] || 'Stage information';
+        }
+
+        // Show test mode controls if test mode is selected
+        var testModeControlsElement = document.getElementById('testModeControls');
+        if (currentStage === 'test') {
+            testModeControlsElement.style.display = 'block';
         }
 
         // Prevent default browser behavior for game controls
@@ -265,7 +290,11 @@
                 'ShiftLeft', 'ShiftRight',
                 'Enter',
                 'Escape',
-                'F1', 'F2', 'F3', 'F4', 'F5'
+                'F1', 'F2', 'F3', 'F4', 'F5',
+                // Test mode keys
+                'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5',
+                'Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0',
+                'KeyR', 'KeyC'
             ];
 
             if (gameKeys.includes(e.code) || gameKeys.includes(e.key)) {
@@ -275,7 +304,8 @@
         }, { capture: true });
 
         var Module = {
-            arguments: currentStage !== '0' ? ['--start-stage', currentStage] : [],
+            arguments: currentStage === 'test' ? ['--test-mode'] :
+                       (currentStage !== '0' ? ['--start-stage', currentStage] : []),
             preRun: [],
             postRun: [],
             print: (function() {
