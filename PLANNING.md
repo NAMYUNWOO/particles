@@ -96,6 +96,64 @@ Handles particle attraction and collision:
 - Batch collision processing for performance
 - Distance-based culling for optimization
 
+### 5. Gravity System
+Universal gravity system supporting multiple concurrent gravity sources:
+
+**Key Files:**
+- `src/core/gravity_system.c/h` - Gravity system implementation
+
+**Architecture:**
+- **Centralized System**: Single system manages all gravity sources (max 32 concurrent)
+- **Registration-based**: Enemies register/unregister gravity sources dynamically
+- **Performance Optimized**: Inline force calculations, early range checks, static arrays (no malloc)
+- **Type Support**: ATTRACTION (BLACKHOLE), REPULSION (REPULSOR), future: ORBITAL, DIRECTIONAL
+
+**Integration Points:**
+1. **InitGame()**: Initializes gravity system at game startup
+2. **Main Game Loop**: `ApplyAllGravitySources()` called after enemy updates (game.c:465)
+3. **Test Mode Loop**: `ApplyAllGravitySources()` called after enemy updates (game.c:181)
+4. **Enemy Updates**: Enemies register/update/unregister gravity sources in `UpdateEnemy()`
+
+**Current Implementations:**
+- **BLACKHOLE (ENEMY_TYPE_BLACKHOLE)**:
+  - Radius: 200px, Strength: 5.0 (attraction)
+  - Only active when INVULNERABLE && !PULSED
+  - Automatically registered/unregistered based on state changes
+  - Stored in `enemy.gravitySourceId` field (0 = no source)
+
+- **REPULSOR (ENEMY_TYPE_REPULSOR)**:
+  - Radius: 150px, Strength: 2.0 (repulsion)
+  - Always active when enemy exists
+  - Automatically registered on spawn, unregistered on death
+
+**Force Calculation:**
+```c
+// Linear falloff with distance
+force = strength * (1.0f - distance / radius)
+direction = normalized(source.position - target.position)
+
+// For repulsion, direction is inverted
+if (REPULSION) direction = -direction
+```
+
+**Developer Tools:**
+- **G Key (Test Mode)**: Toggle gravity field visualization
+  - Purple circles = ATTRACTION fields (BLACKHOLE)
+  - Orange circles = REPULSION fields (REPULSOR)
+  - Labels show type and strength values
+
+**Performance Characteristics:**
+- Early exit if no active sources (zero overhead when unused)
+- Squared distance checks for range culling
+- Inline functions for zero function call overhead
+- Processes 100,000 particles at 60+ FPS with multiple gravity sources
+
+**Future Expansion:**
+- GRAVITY_TYPE_ORBITAL: Tangential forces for orbital mechanics
+- GRAVITY_TYPE_DIRECTIONAL: Wind, conveyor belts, directional forces
+- Gravity affecting enemies, player, items (not just particles)
+- Environmental gravity sources (hazards, portals)
+
 ## Game States
 
 ```
@@ -199,6 +257,10 @@ http://localhost:8000/particle_storm.html?test-mode=1
 - **R**: Remove nearest enemy to cursor
 - **C**: Clear all enemies
 - **F1**: Toggle help overlay
+- **G**: Toggle gravity field visualization (shows BLACKHOLE/REPULSOR fields)
+- **I**: Toggle invulnerability on nearest enemy (hover near enemy)
+- **S**: Toggle shield on nearest enemy (hover near enemy)
+- **P**: Toggle pulsed state on BLACKHOLE (hover near enemy)
 - **ESC**: Exit test mode, return to main menu
 
 **Test Mode Features:**
@@ -257,9 +319,10 @@ src/
 ├── core/
 │   ├── game.c/h             # Game state management
 │   ├── physics.c/h          # Physics simulation
+│   ├── gravity_system.c/h   # Universal gravity system
 │   ├── input_handler.c/h    # Input processing
 │   ├── memory_pool.c/h      # Memory pool system
-│   ├── dev_test_mode.c/h    # Developer test mode (NEW)
+│   ├── dev_test_mode.c/h    # Developer test mode
 │   └── event/
 │       ├── event_system.c/h # Event system core
 │       └── event_types.h    # Event structures
